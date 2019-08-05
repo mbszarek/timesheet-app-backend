@@ -1,9 +1,11 @@
 package com.timesheet
 
-import cats.effect.{ExitCode, IO, IOApp}
-import cats.implicits._
+import cats.effect.ExitCode
+import monix.eval.{Task, TaskApp}
 
-object Main extends IOApp {
-  def run(args: List[String]): IO[ExitCode] =
-    Timesheet_appServer.stream[IO].compile.drain.as(ExitCode.Success)
+object Main extends TaskApp {
+  def run(args: List[String]): Task[ExitCode] =
+    for {
+      _ <- Server.stream[Task].compile.drain
+    } yield ExitCode.Success
 }
