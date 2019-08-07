@@ -1,10 +1,10 @@
-package com.timesheet.core.dao.user
+package com.timesheet.core.store.user
 
 import cats.data.OptionT
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 
-trait UserDaoAlgebra[F[_]] {
+trait UserStoreAlgebra[F[_]] {
   def create(user: User): F[User]
 
   def update(user: User): OptionT[F, User]

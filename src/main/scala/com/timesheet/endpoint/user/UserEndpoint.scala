@@ -1,23 +1,21 @@
 package com.timesheet.endpoint.user
 
-import cats._
-import cats.implicits._
-import cats.effect._
 import cats.data._
+import cats.effect._
+import cats.implicits._
 import com.timesheet.core.service.user.UserService
+import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.model.login.LoginRequest
+import com.timesheet.model.user.User
+import com.timesheet.model.user.User.UserId
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe._
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
-import org.http4s.{EntityDecoder, HttpRoutes}
 import org.http4s.dsl.Http4sDsl
+import org.http4s.{EntityDecoder, HttpRoutes}
 import tsec.authentication.{AugmentedJWT, Authenticator, SecuredRequestHandler}
-import tsec.common.Verified
 import tsec.jwt.algorithms.JWTMacAlgo
-import tsec.passwordhashers.{PasswordHash, PasswordHasher}
-import com.timesheet.core.validation.ValidationUtils._
+import tsec.passwordhashers.PasswordHasher
 
 class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   implicit val userDecoder: EntityDecoder[F, User]             = jsonOf
@@ -34,11 +32,11 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           login <- EitherT.liftF(req.as[LoginRequest])
           name = login.userName
           user        <- userService.getUserByUserName(name)
-          checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
-          _ <- checkResult match {
+//          checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
+          /*_ <- checkResult match {
             case Verified => EitherT.rightT[F, UserDoesNotExists.type](())
             case _        => EitherT.leftT[F, User](UserDoesNotExists)
-          }
+          }*/
           token <- user.id match {
             case None     => throw new Exception("Impossibru")
             case Some(id) => EitherT.right[UserDoesNotExists.type](auth.create(id))
