@@ -1,14 +1,14 @@
 package com.timesheet
 
-import cats.effect.{ConcurrentEffect, ContextShift, Timer}
-import com.timesheet.auth.ExampleAuth
+import cats.effect.{ConcurrentEffect, ContextShift, Resource, Timer}
 import fs2.Stream
-import cats.implicits._
+import monix.eval.Task
+import monix.execution.Scheduler.Implicits.global
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.Logger
-import monix.execution.Scheduler.Implicits.global
+import tsec.mac.jca.HMACSHA256
 
 object Server {
 
@@ -16,16 +16,13 @@ object Server {
     for {
       _ <- BlazeClientBuilder[F](global).stream
       helloWorldAlg = HelloWorld.impl[F]
-      authedService = ExampleAuth[F]
 
       // Combine Service Routes into an HttpApp.
       // Can also be done via a Router if you
       // want to extract a segments not checked
       // in the underlying routes.
-      httpApp = (
-        Routes.helloWorldRoutes[F](helloWorldAlg) <+>
-          authedService.service
-        ).orNotFound
+
+      httpApp = Routes.helloWorldRoutes[F](helloWorldAlg).orNotFound
 
       // With Middlewares in place
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
