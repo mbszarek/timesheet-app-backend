@@ -1,9 +1,10 @@
-val Http4sVersion  = "0.21.0-M1"
-val CirceVersion   = "0.11.1"
-val Specs2Version  = "4.1.0"
-val LogbackVersion = "1.2.3"
-val MonixVersion   = "3.0.0-RC3"
-val tsecV          = "0.2.0-M1"
+val Http4sVersion        = "0.21.0-M1"
+val CirceVersion         = "0.11.1"
+val Specs2Version        = "4.1.0"
+val LogbackVersion       = "1.2.3"
+val MonixVersion         = "3.0.0-RC3"
+val tsecV                = "0.2.0-M1"
+val ReactiveMongoVersion = "0.18.3"
 
 lazy val root = (project in file("."))
   .settings(
@@ -30,7 +31,8 @@ lazy val root = (project in file("."))
       "io.github.jmcardon" %% "tsec-hash-bouncy"    % tsecV,
       "io.github.jmcardon" %% "tsec-jwt-mac"        % tsecV,
       "io.github.jmcardon" %% "tsec-jwt-sig"        % tsecV,
-      "io.github.jmcardon" %% "tsec-http4s"         % tsecV
+      "io.github.jmcardon" %% "tsec-http4s"         % tsecV,
+      "org.reactivemongo"  %% "reactivemongo"       % ReactiveMongoVersion
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
     addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.0")
