@@ -16,10 +16,6 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
 
   private val random = new Random()
 
-  locally {
-    cache += (UserId(1234) -> User(UserId(1234).some, "mszarek", "Mateusz", "Szarek", "a@a.com", "123", "123", Role.Admin))
-  }
-
   def create(user: User): F[User] = {
     val id     = UserId(random.nextLong())
     val toSave = user.copy(id = id.some)

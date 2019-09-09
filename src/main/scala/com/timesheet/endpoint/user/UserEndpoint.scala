@@ -3,9 +3,11 @@ package com.timesheet.endpoint.user
 import cats.data._
 import cats.effect._
 import cats.implicits._
+import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserService
 import com.timesheet.core.validation.ValidationUtils._
-import com.timesheet.model.login.LoginRequest
+import com.timesheet.endpoint.AuthEndpoint
+import com.timesheet.model.login.{LoginRequest, SignupRequest}
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import io.circe.generic.auto._
@@ -13,13 +15,15 @@ import io.circe.syntax._
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.{EntityDecoder, HttpRoutes}
-import tsec.authentication.{AugmentedJWT, Authenticator, SecuredRequestHandler}
 import tsec.jwt.algorithms.JWTMacAlgo
-import tsec.passwordhashers.PasswordHasher
+import tsec.passwordhashers.{PasswordHash, PasswordHasher}
+import tsec.authentication._
+import tsec.common.Verified
 
 class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
-  implicit val userDecoder: EntityDecoder[F, User]             = jsonOf
-  implicit val loginReqDecoder: EntityDecoder[F, LoginRequest] = jsonOf
+  implicit val userDecoder: EntityDecoder[F, User]               = jsonOf
+  implicit val loginReqDecoder: EntityDecoder[F, LoginRequest]   = jsonOf
+  implicit val signupReqDecoder: EntityDecoder[F, SignupRequest] = jsonOf
 
   private def loginEndpoint(
     userService: UserService[F],
@@ -32,11 +36,11 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           login <- EitherT.liftF(req.as[LoginRequest])
           name = login.userName
           user        <- userService.getUserByUserName(name)
-//          checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
-          /*_ <- checkResult match {
+          checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
+          _ <- checkResult match {
             case Verified => EitherT.rightT[F, UserDoesNotExists.type](())
             case _        => EitherT.leftT[F, User](UserDoesNotExists)
-          }*/
+          }
           token <- user.id match {
             case None     => throw new Exception("Impossibru")
             case Some(id) => EitherT.right[UserDoesNotExists.type](auth.create(id))
@@ -49,11 +53,34 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         }
     }
 
+  private def signupEndpoint(
+    userService: UserService[F],
+    cryptService: PasswordHasher[F, A],
+  ): AuthEndpoint[F, Auth] = {
+    case req @ POST -> Root asAuthed _ =>
+      val action = for {
+        signup <- req.request.as[SignupRequest]
+        hash   <- cryptService.hashpw(signup.password)
+        user   <- signup.asUser(hash).pure[F]
+        result <- userService.create(user).value
+      } yield result
+
+      action.flatMap {
+        case Right(saved)                  => Ok(saved.asJson)
+        case Left(UserAlreadyExists(user)) => Conflict(s"Cannot create user with username: ${user.userName}")
+      }
+  }
+
   def endpoints(
     userService: UserService[F],
     cryptService: PasswordHasher[F, A],
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
-  ): HttpRoutes[F] = loginEndpoint(userService, cryptService, auth.authenticator)
+  ): HttpRoutes[F] = {
+    val adminRoutes = Auth.adminOnly {
+      signupEndpoint(userService, cryptService)
+    }
+    loginEndpoint(userService, cryptService, auth.authenticator) <+> auth.liftService(adminRoutes)
+  }
 }
 
 object UserEndpoint {

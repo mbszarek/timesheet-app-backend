@@ -17,7 +17,7 @@ class HelloWorldEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   import HelloWorldEndpoint._
 
   private def helloEndpoint(): AuthEndpoint[F, Auth] = {
-    case POST -> Root asAuthed _ =>
+    case GET -> Root asAuthed _ =>
       Ok(Greeting("XDDDD"))
   }
 

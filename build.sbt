@@ -4,14 +4,14 @@ val Specs2Version        = "4.1.0"
 val LogbackVersion       = "1.2.3"
 val MonixVersion         = "3.0.0-RC3"
 val tsecV                = "0.2.0-M1"
-val ReactiveMongoVersion = "0.18.3"
+val ReactiveMongoVersion = "0.18.5"
 
 lazy val root = (project in file("."))
   .settings(
     organization := "com.timesheet",
     name := "timesheet_app",
     version := "0.0.1",
-    scalaVersion := "2.12.8",
+    scalaVersion := "2.12.9",
     libraryDependencies ++= Seq(
       "org.http4s"         %% "http4s-blaze-server" % Http4sVersion,
       "org.http4s"         %% "http4s-blaze-client" % Http4sVersion,
