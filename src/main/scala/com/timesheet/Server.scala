@@ -13,7 +13,7 @@ import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.server.middleware.Logger
+import org.http4s.server.middleware.{CORS, Logger}
 import tsec.authentication.SecuredRequestHandler
 import tsec.mac.jca.HMACSHA256
 import tsec.passwordhashers.jca.BCrypt
@@ -49,7 +49,7 @@ object Server {
 
       exitCode <- BlazeServerBuilder[F]
         .bindHttp(38080, "0.0.0.0")
-        .withHttpApp(finalHttpApp)
+        .withHttpApp(CORS(finalHttpApp))
         .serve
     } yield exitCode
   }.drain

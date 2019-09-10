@@ -4,7 +4,7 @@ import com.timesheet.model.user.{Role, User}
 import tsec.passwordhashers.PasswordHash
 
 final case class LoginRequest(
-  userName: String,
+  username: String,
   password: String,
 )
 

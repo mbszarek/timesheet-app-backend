@@ -8,7 +8,7 @@ import com.timesheet.core.service.user.UserService
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.login.{LoginRequest, SignupRequest}
-import com.timesheet.model.user.User
+import com.timesheet.model.user.{AuthenticationError, User}
 import com.timesheet.model.user.User.UserId
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -34,7 +34,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       case req @ POST -> Root / "login" =>
         val action = for {
           login <- EitherT.liftF(req.as[LoginRequest])
-          name = login.userName
+          name = login.username
           user        <- userService.getUserByUserName(name)
           checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
           _ <- checkResult match {
@@ -49,7 +49,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
         action.value.flatMap {
           case Right((user, token))    => Ok(user.asJson).map(auth.embed(_, token))
-          case Left(UserDoesNotExists) => BadRequest("Authentication failed")
+          case Left(UserDoesNotExists) => BadRequest(AuthenticationError("Authentication failed").asJson)
         }
     }
 

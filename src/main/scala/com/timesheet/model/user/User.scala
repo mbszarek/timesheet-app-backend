@@ -15,6 +15,10 @@ final case class User(
   role: Role,
 )
 
+final case class AuthenticationError(
+  error: String,
+)
+
 object User {
   final case class UserId(id: Long)
 
