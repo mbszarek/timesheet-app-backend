@@ -6,6 +6,6 @@ import monix.eval.{Task, TaskApp}
 object Main extends TaskApp {
   def run(args: List[String]): Task[ExitCode] =
     for {
-      _ <- Server.stream[Task].compile.drain
+      _ <- Server.stream.compile.drain
     } yield ExitCode.Success
 }
