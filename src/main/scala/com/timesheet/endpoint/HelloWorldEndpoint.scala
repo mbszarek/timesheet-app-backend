@@ -37,11 +37,9 @@ object HelloWorldEndpoint {
 
   final case class Greeting(greeting: String) extends AnyVal
 
-  implicit val greetingEncoder: Encoder[Greeting] = new Encoder[Greeting] {
-    final def apply(a: Greeting): Json = Json.obj(
-      ("message", Json.fromString(a.greeting)),
-    )
-  }
+  implicit val greetingEncoder: Encoder[Greeting] = (a: Greeting) => Json.obj(
+    ("message", Json.fromString(a.greeting)),
+  )
   implicit def greetingEntityEncoder[F[_]: Applicative]: EntityEncoder[F, Greeting] =
     jsonEncoderOf[F, Greeting]
 }

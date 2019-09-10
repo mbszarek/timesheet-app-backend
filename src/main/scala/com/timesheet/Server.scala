@@ -6,7 +6,7 @@ import com.timesheet.core.service.user.UserService
 import com.timesheet.core.store.auth.AuthStoreInMemory
 import com.timesheet.core.store.user.impl.UserStoreInMemory
 import com.timesheet.core.validation.user.impl.UserValidator
-import com.timesheet.endpoint.HelloWorldEndpoint
+import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
 import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.init.InitService
 import fs2.Stream
@@ -42,6 +42,7 @@ object Server {
       httpApp = Router(
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, BCrypt.syncPasswordHasher[F], routeAuth),
         "/hello" -> HelloWorldEndpoint[F, HMACSHA256](routeAuth),
+        "/test" -> TestEndpoint[F],
       ).orNotFound
       // With Middlewares in place
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
