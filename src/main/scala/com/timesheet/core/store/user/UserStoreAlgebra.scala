@@ -11,6 +11,8 @@ trait UserStoreAlgebra[F[_]] {
 
   def get(userId: UserId): OptionT[F, User]
 
+  def getAll(): F[Seq[User]]
+
   def delete(userId: UserId): OptionT[F, User]
 
   def findByUsername(username: String): OptionT[F, User]

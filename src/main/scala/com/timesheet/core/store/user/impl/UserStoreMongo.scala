@@ -4,9 +4,10 @@ package core.store.user.impl
 import cats.data.OptionT
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.model.user.{Role, User}
 import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{Role, User}
 import monix.eval.Task
+import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, Macros, document}
 import tsec.authentication.IdentityStore
@@ -76,6 +77,15 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
         user     <- collection.executeOnCollection(coll => implicit sc => coll.find(selector, None).one)
       } yield user
     }
+
+  override def getAll(): Task[Seq[User]] = {
+    import UserStoreMongo.UserInstances._
+
+    collection.executeOnCollection(
+      coll =>
+        implicit sc => coll.find(BSONDocument(), None).cursor[User]().collect[Seq](-1, Cursor.FailOnError[Seq[User]]())
+    )
+  }
 
   private def getIdSelector(userId: UserId): Task[BSONDocument] = Task.pure {
     import com.timesheet.core.db.BSONInstances.mongoIdUserIdHandler

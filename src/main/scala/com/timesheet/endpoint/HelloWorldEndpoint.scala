@@ -23,8 +23,7 @@ class HelloWorldEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
   def endpoint(auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]]): HttpRoutes[F] = {
     val authEndpoint: AuthService[F, Auth] = Auth.allRolesHandler(helloEndpoint())(Auth.adminOnly(helloEndpoint()))
-    val x = Auth.adminOnly(helloEndpoint())
-    auth.liftService(x)
+    auth.liftService(authEndpoint)
   }
 
 }

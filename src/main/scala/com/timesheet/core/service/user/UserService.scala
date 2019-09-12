@@ -33,6 +33,9 @@ class UserService[F[_]](userStore: UserStoreAlgebra[F], userValidator: UserValid
 
   def delete(userId: UserId)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
     userStore.delete(userId).toRight(UserDoesNotExists)
+
+  def getAll(): F[Seq[User]] =
+    userStore.getAll()
 }
 
 object UserService {

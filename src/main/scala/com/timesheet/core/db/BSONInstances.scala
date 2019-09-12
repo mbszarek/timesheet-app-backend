@@ -3,7 +3,8 @@ package com.timesheet.core.db
 import java.time.Instant
 
 import com.timesheet.model.user.User.UserId
-import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONObjectID, BSONReader, BSONString, BSONWriter, Macros}
+import javax.xml.bind.DatatypeConverter
+import reactivemongo.bson.{BSONDateTime, BSONHandler, BSONObjectID, BSONString, BSONWriter}
 import tsec.common.SecureRandomId
 
 object BSONInstances {
@@ -17,10 +18,9 @@ object BSONInstances {
     (id: SecureRandomId) => BSONString(id)
 
   implicit val mongoIdUserIdHandler: BSONHandler[BSONObjectID, UserId] = new BSONHandler[BSONObjectID, UserId] {
-    override def write(id: UserId): BSONObjectID = BSONObjectID(id.id.getBytes())
+    override def write(id: UserId): BSONObjectID =
+      BSONObjectID(DatatypeConverter.parseHexBinary(id.id))
 
     override def read(bson: BSONObjectID): UserId = UserId(bson.stringify)
   }
-
-  implicit val userIdHandler: BSONDocumentHandler[UserId] = Macros.handler[UserId]
 }

@@ -31,6 +31,9 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
 
   def get(userId: UserId): OptionT[F, User] = OptionT.fromOption(cache.get(userId))
 
+  override def getAll(): F[Seq[User]] =
+    cache.values.toSeq.pure[F]
+
   def delete(userId: UserId): OptionT[F, User] = OptionT.fromOption(cache.remove(userId))
 
   def findByUsername(username: String): OptionT[F, User] =

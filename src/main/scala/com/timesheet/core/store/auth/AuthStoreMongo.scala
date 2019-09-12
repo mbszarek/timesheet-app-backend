@@ -42,13 +42,13 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
   override def get(id: SecureRandomId): OptionT[Task, AugmentedJWT[A, UserId]] = {
 
     implicit val jwtReader: BSONDocumentReader[AugmentedJWT[A, UserId]] = {
-      import com.timesheet.core.db.BSONInstances.instantHandler
+      import com.timesheet.core.db.BSONInstances.{instantHandler, mongoIdUserIdHandler}
 
       (bson: BSONDocument) =>
         {
           val value = for {
             jwt      <- bson.getAs[String]("jwt")
-            identity <- bson.getAs[String]("identity")
+            identity <- bson.getAs[UserId]("identity")
             expiry   <- bson.getAs[Instant]("expiry")
           } yield (jwt, identity, expiry)
 
@@ -59,7 +59,7 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
               JWTMacImpure.verifyAndParse(jwtStringify, key) match {
                 case Left(err) => throw new Exception(err)
                 case Right(jwt) =>
-                  AugmentedJWT(id, jwt, UserId(identity), expiry, lastTouched)
+                  AugmentedJWT(id, jwt, identity, expiry, lastTouched)
               }
           }
         }
@@ -90,7 +90,7 @@ object AuthStoreMongo {
 
   implicit def jwtWriter[A](implicit hs: JWSSerializer[JWSMacHeader[A]]): BSONDocumentWriter[AugmentedJWT[A, UserId]] =
     (jwt: AugmentedJWT[A, UserId]) => {
-      import com.timesheet.core.db.BSONInstances.{secureRandomIdWriter, userIdHandler, instantHandler}
+      import com.timesheet.core.db.BSONInstances.{secureRandomIdWriter, mongoIdUserIdHandler, instantHandler}
 
       BSONDocument(
         "id"           -> jwt.id,

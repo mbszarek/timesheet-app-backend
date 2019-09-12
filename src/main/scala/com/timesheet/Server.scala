@@ -30,8 +30,8 @@ object Server {
       // want to extract a segments not checked
       // in the underlying routes.
       key <- Stream.eval(HMACSHA256.generateKey[Task])
-//      authStore = AuthStoreMongo[HMACSHA256](key)
-      authStore = AuthStoreInMemory[Task, HMACSHA256]
+      authStore = AuthStoreMongo[HMACSHA256](key)
+//      authStore = AuthStoreInMemory[Task, HMACSHA256]
       userStore = UserStoreMongo()
 //      userStore      = UserStoreInMemory[Task]
       userValidator  = UserValidator[Task](userStore)
