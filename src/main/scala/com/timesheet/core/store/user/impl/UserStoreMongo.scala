@@ -1,58 +1,106 @@
-package com.timesheet.core.store.user.impl
+package com.timesheet
+package core.store.user.impl
 
 import cats.data.OptionT
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.model.user.User
+import com.timesheet.model.user.{Role, User}
 import com.timesheet.model.user.User.UserId
 import monix.eval.Task
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, Macros, document}
+import reactivemongo.bson.{BSONDocument, BSONDocumentHandler, BSONDocumentReader, BSONDocumentWriter, Macros, document}
 import tsec.authentication.IdentityStore
 
 class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, UserId, User] with MongoDriverMixin {
-  import com.timesheet.core.db.BSONInstances.userIdWriter
-  import UserStoreMongo._
-
   protected val collection: Task[BSONCollection] = getCollection("Users")
 
-  override def create(user: User): Task[User] =
+  override def create(user: User): Task[User] = {
+    import UserStoreMongo.UserInstances._
+
     for {
-      _ <- collection.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          coll.insert.one(user)
-        }
-      }
+      _ <- collection.executeOnCollection(coll => implicit sc => coll.insert.one(user))
     } yield user
+  }
 
   override def update(user: User): OptionT[Task, User] =
-    OptionT.liftF(
-      for {
-        selector <- getIdSelector(user)
-      _ <- collection.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          coll.update.one(selector, user)
-        }
+    OptionT {
+      import UserStoreMongo.UserInstances._
+
+      user.id.fold[Task[Option[User]]](Task.eval(None)) { userId =>
+        for {
+          selector <- getIdSelector(userId)
+          _        <- collection.executeOnCollection(coll => implicit sc => coll.update.one(selector, user))
+        } yield Some(user)
       }
-      } yield ???
-    )
+    }
 
-  override def delete(userId: UserId): OptionT[Task, User] = ???
+  override def delete(userId: UserId): OptionT[Task, User] = OptionT {
+    {
+      import UserStoreMongo.UserInstances._
 
-  override def findByUserName(userName: String): OptionT[Task, User] = ???
+      for {
+        selector <- getIdSelector(userId)
+        user     <- collection.executeOnCollection[Option[User]](coll => implicit sc => coll.find(selector, None).one)
+        _        <- collection.executeOnCollection[Int](coll => implicit sc => coll.delete.element(user.get).map(_.limit))
+      } yield user
+    }
+  }
 
-  override def deleteByUserName(userName: String): OptionT[Task, User] = ???
+  override def findByUsername(username: String): OptionT[Task, User] =
+    OptionT {
+      import UserStoreMongo.UserInstances._
 
-  override def get(id: UserId): OptionT[Task, User] = ???
+      for {
+        selector <- getUsernameSelector(username)
+        user     <- collection.executeOnCollection(coll => implicit sc => coll.find(selector, None).one)
+      } yield user
+    }
 
-  private def getIdSelector(user: User): Task[BSONDocument] = Task.pure {
+  override def deleteByUsername(username: String): OptionT[Task, User] = {
+    import UserStoreMongo.UserInstances._
+
+    for {
+      user <- findByUsername(username)
+      _ <- OptionT.liftF {
+        collection.executeOnCollection(coll => implicit sc => coll.delete.one(user))
+      }
+    } yield user
+  }
+
+  override def get(id: UserId): OptionT[Task, User] =
+    OptionT {
+      import UserStoreMongo.UserInstances._
+
+      for {
+        selector <- getIdSelector(id)
+        user     <- collection.executeOnCollection(coll => implicit sc => coll.find(selector, None).one)
+      } yield user
+    }
+
+  private def getIdSelector(userId: UserId): Task[BSONDocument] = Task.pure {
+    import com.timesheet.core.db.BSONInstances.mongoIdUserIdHandler
+
     document(
-      "id" -> user.id.get
+      "_id" -> userId,
+    )
+  }
+
+  private def getUsernameSelector(username: String): Task[BSONDocument] = Task.pure {
+    document(
+      "username" -> username,
     )
   }
 }
 
 object UserStoreMongo {
-  implicit val userReader: BSONDocumentReader[User] = Macros.reader[User]
-  implicit val userWriter: BSONDocumentWriter[User] = Macros.writer[User]
+  def apply(): UserStoreMongo = new UserStoreMongo()
+
+  implicit val roleHandler: BSONDocumentHandler[Role] = Macros.handler[Role]
+
+  object UserInstances {
+    import com.timesheet.core.db.BSONInstances.mongoIdUserIdHandler
+
+    implicit val userReader: BSONDocumentReader[User] = Macros.reader[User]
+    implicit val userWriter: BSONDocumentWriter[User] = Macros.writer[User]
+  }
 }

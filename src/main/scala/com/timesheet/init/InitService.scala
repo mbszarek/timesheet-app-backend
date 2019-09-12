@@ -11,12 +11,14 @@ class InitService[F[_]: ConcurrentEffect, A](
   passwordHasher: PasswordHasher[F, A],
   userService: UserService[F],
 ) {
-  import InitService.Admin
+  import InitService.{Admin, NonAdmin}
 
   def init: F[Unit] =
     for {
-      adminPwHash <- passwordHasher.hashpw(Admin.hash)
-      _           <- userService.create(Admin.copy(hash = adminPwHash.toString)).value
+      adminPwHash    <- passwordHasher.hashpw(Admin.hash)
+      _              <- userService.create(Admin.copy(hash = adminPwHash.toString)).value
+      nonAdminPwHash <- passwordHasher.hashpw(NonAdmin.hash)
+      _              <- userService.create(NonAdmin.copy(hash = nonAdminPwHash.toString)).value
     } yield ()
 }
 
@@ -36,5 +38,16 @@ object InitService {
     "homarulek",
     "725482699",
     Role.Admin,
+  )
+
+  private val NonAdmin = User(
+    Option.empty,
+    "mszarek",
+    "Mateusz",
+    "Szarek",
+    "mszarek@avsystem.com",
+    "homarulek",
+    "725482699",
+    Role.Customer,
   )
 }

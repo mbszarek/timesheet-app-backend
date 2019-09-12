@@ -11,13 +11,13 @@ import com.timesheet.model.user.User
 class UserValidator[F[_]: Applicative](userStore: UserStoreAlgebra[F]) extends UserValidatorAlgebra[F] {
   def doesExist(user: User): EitherT[F, ValidationUtils.UserDoesNotExists.type, Unit] =
     userStore
-      .findByUserName(user.userName)
+      .findByUsername(user.username)
       .map(_ => ())
       .toRight(UserDoesNotExists)
 
   def doesNotExist(user: User): EitherT[F, ValidationUtils.UserAlreadyExists, Unit] =
     userStore
-      .findByUserName(user.userName)
+      .findByUsername(user.username)
       .map(UserAlreadyExists.apply)
       .toLeft(())
 }

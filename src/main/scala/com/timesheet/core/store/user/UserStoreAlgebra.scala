@@ -13,7 +13,7 @@ trait UserStoreAlgebra[F[_]] {
 
   def delete(userId: UserId): OptionT[F, User]
 
-  def findByUserName(userName: String): OptionT[F, User]
+  def findByUsername(username: String): OptionT[F, User]
 
-  def deleteByUserName(userName: String): OptionT[F, User]
+  def deleteByUsername(username: String): OptionT[F, User]
 }

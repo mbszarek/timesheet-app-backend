@@ -2,11 +2,12 @@ package com.timesheet.model.user
 
 import cats.Applicative
 import com.timesheet.model.user.User._
+import reactivemongo.bson.Macros.Annotations.Key
 import tsec.authorization.AuthorizationInfo
 
 final case class User(
-  id: Option[UserId] = None,
-  userName: String,
+  @Key("_id") id: Option[UserId] = None,
+  username: String,
   firstName: String,
   lastName: String,
   email: String,
@@ -20,10 +21,8 @@ final case class AuthenticationError(
 )
 
 object User {
-  final case class UserId(id: Long)
+  final case class UserId(id: String)
 
   implicit def authRole[F[_]](implicit F: Applicative[F]): AuthorizationInfo[F, Role, User] =
-    new AuthorizationInfo[F, Role, User] {
-      override def fetchInfo(u: User): F[Role] = F.pure(u.role)
-    }
+    (u: User) => F.pure(u.role)
 }

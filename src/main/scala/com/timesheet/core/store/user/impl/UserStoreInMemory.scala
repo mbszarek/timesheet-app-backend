@@ -1,23 +1,22 @@
 package com.timesheet.core.store.user.impl
 
+import java.util.UUID
+
 import cats._
 import cats.data.OptionT
 import cats.implicits._
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.model.user.{Role, User}
+import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import tsec.authentication.IdentityStore
 
 import scala.collection.concurrent.TrieMap
-import scala.util.Random
 
 class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with IdentityStore[F, UserId, User] {
   private val cache = new TrieMap[UserId, User]
 
-  private val random = new Random()
-
   def create(user: User): F[User] = {
-    val id     = UserId(random.nextLong())
+    val id     = UserId(UUID.randomUUID().toString)
     val toSave = user.copy(id = id.some)
     cache += (id -> toSave)
     toSave.pure[F]
@@ -34,12 +33,12 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
 
   def delete(userId: UserId): OptionT[F, User] = OptionT.fromOption(cache.remove(userId))
 
-  def findByUserName(userName: String): OptionT[F, User] =
-    OptionT.fromOption(cache.values.find(_.userName == userName))
+  def findByUsername(username: String): OptionT[F, User] =
+    OptionT.fromOption(cache.values.find(_.username == username))
 
-  def deleteByUserName(userName: String): OptionT[F, User] = OptionT.fromOption {
+  def deleteByUsername(username: String): OptionT[F, User] = OptionT.fromOption {
     for {
-      user   <- cache.values.find(_.userName == userName)
+      user   <- cache.values.find(_.username == username)
       userId <- user.id
       result <- cache.remove(userId)
     } yield result

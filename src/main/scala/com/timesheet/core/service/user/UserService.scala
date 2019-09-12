@@ -25,11 +25,11 @@ class UserService[F[_]](userStore: UserStoreAlgebra[F], userValidator: UserValid
   def getUserByUserId(userId: UserId)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
     userStore.get(userId).toRight(UserDoesNotExists)
 
-  def getUserByUserName(userName: String)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
-    userStore.findByUserName(userName).toRight(UserDoesNotExists)
+  def getUserByUserName(username: String)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
+    userStore.findByUsername(username).toRight(UserDoesNotExists)
 
-  def deleteByUserName(userName: String)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
-    userStore.deleteByUserName(userName).toRight(UserDoesNotExists)
+  def deleteByUserName(username: String)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
+    userStore.deleteByUsername(username).toRight(UserDoesNotExists)
 
   def delete(userId: UserId)(implicit F: Functor[F]): EitherT[F, UserDoesNotExists.type, User] =
     userStore.delete(userId).toRight(UserDoesNotExists)

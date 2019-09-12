@@ -9,22 +9,22 @@ final case class LoginRequest(
 )
 
 final case class SignupRequest(
-  userName: String,
+  username: String,
   firstName: String,
   lastName: String,
   email: String,
   password: String,
   phone: String,
-  role: Role
+  role: Role,
 ) {
   def asUser[A](hashedPassword: PasswordHash[A]): User = User(
     Option.empty,
-    userName,
+    username,
     firstName,
     lastName,
     email,
     hashedPassword.toString,
     phone,
-    role = role
+    role = role,
   )
 }

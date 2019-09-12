@@ -6,7 +6,7 @@ import monix.execution.Scheduler.Implicits.global
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserService
 import com.timesheet.core.store.auth.{AuthStoreInMemory, AuthStoreMongo}
-import com.timesheet.core.store.user.impl.UserStoreInMemory
+import com.timesheet.core.store.user.impl.{UserStoreInMemory, UserStoreMongo}
 import com.timesheet.core.validation.user.impl.UserValidator
 import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
 import com.timesheet.endpoint.user.UserEndpoint
@@ -30,12 +30,13 @@ object Server {
       // want to extract a segments not checked
       // in the underlying routes.
       key <- Stream.eval(HMACSHA256.generateKey[Task])
-      mongoAuthStore = AuthStoreMongo[HMACSHA256](key)
-//      authStore      = AuthStoreInMemory[Task, HMACSHA256]
-      userStore      = UserStoreInMemory[Task]
+//      authStore = AuthStoreMongo[HMACSHA256](key)
+      authStore = AuthStoreInMemory[Task, HMACSHA256]
+      userStore = UserStoreMongo()
+//      userStore      = UserStoreInMemory[Task]
       userValidator  = UserValidator[Task](userStore)
       userService    = UserService[Task](userStore, userValidator)
-      authenticator  = Auth.jwtAuthenticator[Task, HMACSHA256](key, mongoAuthStore, userStore)
+      authenticator  = Auth.jwtAuthenticator[Task, HMACSHA256](key, authStore, userStore)
       routeAuth      = SecuredRequestHandler(authenticator)
       passwordHasher = BCrypt.syncPasswordHasher[Task]
       initService    = InitService[Task, BCrypt](passwordHasher, userService)

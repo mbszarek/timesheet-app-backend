@@ -1,4 +1,5 @@
-package com.timesheet.core.store.auth
+package com.timesheet
+package core.store.auth
 
 import java.time.Instant
 
@@ -19,50 +20,35 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
     with MongoDriverMixin {
   import AuthStoreMongo._
 
-  private def collection: Task[BSONCollection] = getCollection("auth")
+  protected val collection: Task[BSONCollection] = getCollection("auth")
 
   override def put(elem: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
     for {
-//      _ <- performOnCollection { (coll, sc) =>
-//        coll.insert.one(elem)(sc)
-//      }
-      _ <- collection.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          coll.insert.one(elem)
-        }
-      }
+      _ <- collection.executeOnCollection(coll => implicit sc => coll.insert.one(elem))
     } yield elem
 
   override def update(v: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
     for {
       selector <- getIdSelector(v.id)
-      _ <- collection.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          coll.update.one(selector, v)
-        }
-      }
+      _        <- collection.executeOnCollection(coll => implicit sc => coll.update.one(selector, v))
     } yield v
 
   override def delete(id: SecureRandomId): Task[Unit] =
     for {
       selector <- getIdSelector(id)
-      _ <- collection.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          coll.delete.one(selector)
-        }
-      }
+      _        <- collection.executeOnCollection(coll => implicit sc => coll.delete.one(selector))
     } yield ()
 
   override def get(id: SecureRandomId): OptionT[Task, AugmentedJWT[A, UserId]] = {
 
     implicit val jwtReader: BSONDocumentReader[AugmentedJWT[A, UserId]] = {
-      import com.timesheet.core.db.BSONInstances.instantReader
+      import com.timesheet.core.db.BSONInstances.instantHandler
 
       (bson: BSONDocument) =>
         {
           val value = for {
             jwt      <- bson.getAs[String]("jwt")
-            identity <- bson.getAs[Long]("identity")
+            identity <- bson.getAs[String]("identity")
             expiry   <- bson.getAs[Instant]("expiry")
           } yield (jwt, identity, expiry)
 
@@ -82,13 +68,7 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
     OptionT {
       for {
         selector <- getIdSelector(id)
-        entity <- collection.flatMap { coll =>
-          Task.deferFutureAction { implicit sc =>
-            val x = coll.find(selector, None).one
-            x.onComplete(println)
-            x
-          }
-        }
+        entity   <- collection.executeOnCollection(coll => implicit sc => coll.find(selector, None).one)
       } yield entity
     }
   }
@@ -103,20 +83,21 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
 }
 
 object AuthStoreMongo {
-  import com.timesheet.core.db.BSONInstances._
-
   def apply[A](
     key: MacSigningKey[A]
   )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[A] =
     new AuthStoreMongo(key)(hs, s)
 
   implicit def jwtWriter[A](implicit hs: JWSSerializer[JWSMacHeader[A]]): BSONDocumentWriter[AugmentedJWT[A, UserId]] =
-    (jwt: AugmentedJWT[A, UserId]) =>
+    (jwt: AugmentedJWT[A, UserId]) => {
+      import com.timesheet.core.db.BSONInstances.{secureRandomIdWriter, userIdHandler, instantHandler}
+
       BSONDocument(
         "id"           -> jwt.id,
         "jwt"          -> jwt.jwt.toEncodedString,
-        "identity"     -> jwt.identity.id,
+        "identity"     -> jwt.identity,
         "expiry"       -> jwt.expiry,
         "last_touched" -> jwt.lastTouched,
-    )
+      )
+    }
 }

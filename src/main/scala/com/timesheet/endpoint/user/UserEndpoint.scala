@@ -67,7 +67,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
       action.flatMap {
         case Right(saved)                  => Ok(saved.asJson)
-        case Left(UserAlreadyExists(user)) => Conflict(s"Cannot create user with username: ${user.userName}")
+        case Left(UserAlreadyExists(user)) => Conflict(s"Cannot create user with username: ${user.username}")
       }
   }
 
