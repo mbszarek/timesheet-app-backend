@@ -14,7 +14,7 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.{EntityDecoder, HttpRoutes}
+import org.http4s.{EntityDecoder, HttpRoutes, Response}
 import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.passwordhashers.{PasswordHash, PasswordHasher}
 import tsec.authentication._
@@ -75,7 +75,9 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     userService: UserService[F],
   ): AuthEndpoint[F, Auth] = {
     case GET -> Root asAuthed _ =>
-      Ok(userService.getAll().asJson)
+      userService.getAll().flatMap { user =>
+        Ok(user.asJson)
+      }
   }
 
   def endpoints(
@@ -83,11 +85,13 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     cryptService: PasswordHasher[F, A],
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
   ): HttpRoutes[F] = {
+    val allRolesRoutes = Auth.allRolesHandler {
+      getAllUsersEndpoint(userService)
+    }(TSecAuthService.empty)
     val adminRoutes = Auth.adminOnly {
       signupEndpoint(userService, cryptService)
     }
-//    val getAllEndpoint = getAllUsersEndpoint(userService)
-    loginEndpoint(userService, cryptService, auth.authenticator) <+> auth.liftService(adminRoutes)
+    loginEndpoint(userService, cryptService, auth.authenticator) <+> auth.liftService(allRolesRoutes <+> adminRoutes)
   }
 }
 
