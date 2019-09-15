@@ -1,7 +1,5 @@
 package com.timesheet.core.store.user.impl
 
-import java.util.UUID
-
 import cats._
 import cats.data.OptionT
 import cats.implicits._
@@ -16,17 +14,13 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
   private val cache = new TrieMap[UserId, User]
 
   def create(user: User): F[User] = {
-    val id     = UserId(UUID.randomUUID().toString)
-    val toSave = user.copy(id = id.some)
-    cache += (id -> toSave)
-    toSave.pure[F]
+    cache += (user.id -> user)
+    user.pure[F]
   }
 
-  def update(user: User): OptionT[F, User] = OptionT {
-    user.id.traverse { id =>
-      cache.update(id, user)
-      user.pure[F]
-    }
+  def update(user: User): OptionT[F, User] = OptionT.liftF {
+    cache.update(user.id, user)
+    user.pure[F]
   }
 
   def get(userId: UserId): OptionT[F, User] = OptionT.fromOption(cache.get(userId))
@@ -42,8 +36,7 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
   def deleteByUsername(username: String): OptionT[F, User] = OptionT.fromOption {
     for {
       user   <- cache.values.find(_.username == username)
-      userId <- user.id
-      result <- cache.remove(userId)
+      result <- cache.remove(user.id)
     } yield result
   }
 }

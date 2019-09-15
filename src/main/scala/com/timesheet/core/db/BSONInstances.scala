@@ -16,11 +16,4 @@ object BSONInstances {
 
   implicit val secureRandomIdWriter: BSONWriter[SecureRandomId, BSONString] =
     (id: SecureRandomId) => BSONString(id)
-
-  implicit val mongoIdUserIdHandler: BSONHandler[BSONObjectID, UserId] = new BSONHandler[BSONObjectID, UserId] {
-    override def write(id: UserId): BSONObjectID =
-      BSONObjectID(DatatypeConverter.parseHexBinary(id.id))
-
-    override def read(bson: BSONObjectID): UserId = UserId(bson.stringify)
-  }
 }

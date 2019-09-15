@@ -1,9 +1,10 @@
 package com.timesheet.init
 
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 import cats.effect.ConcurrentEffect
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import com.timesheet.core.service.user.UserService
+import com.timesheet.model.user.User.UserId
 import com.timesheet.model.user.{Role, User}
 import tsec.passwordhashers.PasswordHasher
 
@@ -15,10 +16,14 @@ class InitService[F[_]: ConcurrentEffect, A](
 
   def init: F[Unit] =
     for {
-      adminPwHash    <- passwordHasher.hashpw(Admin.hash)
-      _              <- userService.create(Admin.copy(hash = adminPwHash.toString)).value
-      nonAdminPwHash <- passwordHasher.hashpw(NonAdmin.hash)
-      _              <- userService.create(NonAdmin.copy(hash = nonAdminPwHash.toString)).value
+      _ <- insertAccount(Admin)
+      _ <- insertAccount(NonAdmin)
+    } yield ()
+
+  private def insertAccount(user: User): F[Unit] =
+    for {
+      pwHash <- passwordHasher.hashpw(user.hash)
+      _      <- userService.create(user.copy(hash = pwHash)).value
     } yield ()
 }
 
@@ -30,7 +35,7 @@ object InitService {
     new InitService(passwordHasher, userService)
 
   private val Admin = User(
-    Option.empty,
+    UserId.createNew(),
     "avsystem",
     "AV",
     "System",
@@ -41,7 +46,7 @@ object InitService {
   )
 
   private val NonAdmin = User(
-    Option.empty,
+    UserId.createNew(),
     "mszarek",
     "Mateusz",
     "Szarek",

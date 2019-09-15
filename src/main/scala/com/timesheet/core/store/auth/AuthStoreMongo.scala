@@ -24,25 +24,26 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
 
   override def put(elem: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
     for {
-      _ <- collection.executeOnCollection(coll => implicit sc => coll.insert.one(elem))
+      _ <- collection.executeOnCollection(implicit sc => _.insert.one(elem))
     } yield elem
 
   override def update(v: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
     for {
       selector <- getIdSelector(v.id)
-      _        <- collection.executeOnCollection(coll => implicit sc => coll.update.one(selector, v))
+      _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, v))
     } yield v
 
   override def delete(id: SecureRandomId): Task[Unit] =
     for {
       selector <- getIdSelector(id)
-      _        <- collection.executeOnCollection(coll => implicit sc => coll.delete.one(selector))
+      _        <- collection.executeOnCollection(implicit sc => _.delete.one(selector))
     } yield ()
 
   override def get(id: SecureRandomId): OptionT[Task, AugmentedJWT[A, UserId]] = {
 
     implicit val jwtReader: BSONDocumentReader[AugmentedJWT[A, UserId]] = {
-      import com.timesheet.core.db.BSONInstances.{instantHandler, mongoIdUserIdHandler}
+      import com.timesheet.core.db.BSONInstances.instantHandler
+      import com.timesheet.model.user.User.UserId.userIdHandler
 
       (bson: BSONDocument) =>
         {
@@ -68,7 +69,7 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
     OptionT {
       for {
         selector <- getIdSelector(id)
-        entity   <- collection.executeOnCollection(coll => implicit sc => coll.find(selector, None).one)
+        entity   <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
       } yield entity
     }
   }
@@ -90,7 +91,8 @@ object AuthStoreMongo {
 
   implicit def jwtWriter[A](implicit hs: JWSSerializer[JWSMacHeader[A]]): BSONDocumentWriter[AugmentedJWT[A, UserId]] =
     (jwt: AugmentedJWT[A, UserId]) => {
-      import com.timesheet.core.db.BSONInstances.{secureRandomIdWriter, mongoIdUserIdHandler, instantHandler}
+      import com.timesheet.core.db.BSONInstances.{instantHandler, secureRandomIdWriter}
+      import com.timesheet.model.user.User.UserId.userIdHandler
 
       BSONDocument(
         "id"           -> jwt.id,

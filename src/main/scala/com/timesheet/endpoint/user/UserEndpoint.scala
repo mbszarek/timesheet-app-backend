@@ -4,21 +4,22 @@ import cats.data._
 import cats.effect._
 import cats.implicits._
 import com.timesheet.core.auth.Auth
+import com.timesheet.core.error.AuthenticationError
 import com.timesheet.core.service.user.UserService
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.login.{LoginRequest, SignupRequest}
-import com.timesheet.model.user.{AuthenticationError, User}
+import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.{EntityDecoder, HttpRoutes, Response}
-import tsec.jwt.algorithms.JWTMacAlgo
-import tsec.passwordhashers.{PasswordHash, PasswordHasher}
+import org.http4s.{EntityDecoder, HttpRoutes}
 import tsec.authentication._
 import tsec.common.Verified
+import tsec.jwt.algorithms.JWTMacAlgo
+import tsec.passwordhashers.{PasswordHash, PasswordHasher}
 
 class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   implicit val userDecoder: EntityDecoder[F, User]               = jsonOf
@@ -41,10 +42,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
             case Verified => EitherT.rightT[F, UserDoesNotExists.type](())
             case _        => EitherT.leftT[F, User](UserDoesNotExists)
           }
-          token <- user.id match {
-            case None     => throw new Exception("Impossibru")
-            case Some(id) => EitherT.right[UserDoesNotExists.type](auth.create(id))
-          }
+          token <- EitherT.right[UserDoesNotExists.type](auth.create(user.id))
         } yield (user, token)
 
         action.value.flatMap {
