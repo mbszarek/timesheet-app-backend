@@ -68,3 +68,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
       }
     } yield result
 }
+
+object WorkSamplesStoreMongo {
+  def apply(): WorkSamplesStoreMongo = new WorkSamplesStoreMongo()
+}

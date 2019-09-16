@@ -29,7 +29,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   private def loginEndpoint(
     userService: UserService[F],
     cryptService: PasswordHasher[F, A],
-    auth: Authenticator[F, UserId, User, AugmentedJWT[Auth, UserId]]
+    auth: Authenticator[F, UserId, User, AugmentedJWT[Auth, UserId]],
   ): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req @ POST -> Root / "login" =>

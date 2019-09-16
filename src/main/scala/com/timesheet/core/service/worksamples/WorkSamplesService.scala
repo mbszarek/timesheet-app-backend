@@ -28,3 +28,8 @@ class WorkSamplesService[F[_]](workSamplesStore: WorkSamplesStoreAlgebra[F]) {
     Instant.now(),
   )
 }
+
+object WorkSamplesService {
+  def apply[F[_]](workSamplesStore: WorkSamplesStoreAlgebra[F]): WorkSamplesService[F] =
+    new WorkSamplesService[F](workSamplesStore)
+}
