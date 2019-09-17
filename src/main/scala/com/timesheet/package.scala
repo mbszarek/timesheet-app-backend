@@ -6,11 +6,11 @@ import reactivemongo.api.collections.bson.BSONCollection
 import scala.concurrent.{ExecutionContext, Future}
 
 package object timesheet {
-  implicit def taskOps(task: Task[BSONCollection]): TaskOps = new TaskOps(task)
+  implicit def collectionTaskOps(task: Task[BSONCollection]): CollectionTaskOps = new CollectionTaskOps(task)
 
-  final class TaskOps(private val task: Task[BSONCollection]) extends AnyVal {
+  final class CollectionTaskOps(private val collectionTask: Task[BSONCollection]) extends AnyVal {
     def executeOnCollection[K](action: ExecutionContext => BSONCollection => Future[K]): Task[K] = {
-      task.flatMap { coll =>
+      collectionTask.flatMap { coll =>
         Task.deferFutureAction { implicit sc =>
           action(sc)(coll)
         }
