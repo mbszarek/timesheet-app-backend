@@ -2,11 +2,12 @@ package com.timesheet
 package core.store.auth
 
 import java.time.Instant
-
+import cats._
+import cats.implicits._
 import cats.data.OptionT
+import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.model.user.User.UserId
-import monix.eval.Task
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, document}
 import tsec.authentication.{AugmentedJWT, BackingStore}
@@ -15,31 +16,33 @@ import tsec.jws.JWSSerializer
 import tsec.jws.mac.{JWSMacCV, JWSMacHeader, JWTMacImpure}
 import tsec.mac.jca.{MacErrorM, MacSigningKey}
 
-class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A])
-    extends BackingStore[Task, SecureRandomId, AugmentedJWT[A, UserId]]
-    with MongoDriverMixin {
+class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
+  implicit hs: JWSSerializer[JWSMacHeader[A]],
+  s: JWSMacCV[MacErrorM, A],
+) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]]
+    with MongoDriverMixin[F] {
   import AuthStoreMongo._
 
-  protected val collection: Task[BSONCollection] = getCollection("auth")
+  protected val collection: F[BSONCollection] = getCollection("auth")
 
-  override def put(elem: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
+  override def put(elem: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] =
     for {
       _ <- collection.executeOnCollection(implicit sc => _.insert.one(elem))
     } yield elem
 
-  override def update(v: AugmentedJWT[A, UserId]): Task[AugmentedJWT[A, UserId]] =
+  override def update(v: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] =
     for {
       selector <- getIdSelector(v.id)
       _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, v))
     } yield v
 
-  override def delete(id: SecureRandomId): Task[Unit] =
+  override def delete(id: SecureRandomId): F[Unit] =
     for {
       selector <- getIdSelector(id)
       _        <- collection.executeOnCollection(implicit sc => _.delete.one(selector))
     } yield ()
 
-  override def get(id: SecureRandomId): OptionT[Task, AugmentedJWT[A, UserId]] = {
+  override def get(id: SecureRandomId): OptionT[F, AugmentedJWT[A, UserId]] = {
 
     implicit val jwtReader: BSONDocumentReader[AugmentedJWT[A, UserId]] = {
       import com.timesheet.core.db.BSONInstances.instantHandler
@@ -74,7 +77,7 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
     }
   }
 
-  private def getIdSelector(id: SecureRandomId): Task[BSONDocument] = Task.pure {
+  private def getIdSelector(id: SecureRandomId): F[BSONDocument] = Monad[F].pure {
     import com.timesheet.core.db.BSONInstances.secureRandomIdWriter
 
     document(
@@ -84,10 +87,10 @@ class AuthStoreMongo[A](key: MacSigningKey[A])(implicit hs: JWSSerializer[JWSMac
 }
 
 object AuthStoreMongo {
-  def apply[A](
+  def apply[F[_]: FutureConcurrentEffect, A](
     key: MacSigningKey[A]
-  )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[A] =
-    new AuthStoreMongo(key)(hs, s)
+  )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[F, A] =
+    new AuthStoreMongo(key)
 
   implicit def jwtWriter[A](implicit hs: JWSSerializer[JWSMacHeader[A]]): BSONDocumentWriter[AugmentedJWT[A, UserId]] =
     (jwt: AugmentedJWT[A, UserId]) => {

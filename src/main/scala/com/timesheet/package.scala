@@ -1,21 +1,21 @@
 package com
 
-import monix.eval.Task
+import cats.implicits._
+import com.timesheet.concurrent.FutureConcurrentEffect
 import reactivemongo.api.collections.bson.BSONCollection
 
 import scala.concurrent.{ExecutionContext, Future}
 
 package object timesheet {
-  implicit def collectionTaskOps(task: Task[BSONCollection]): CollectionTaskOps = new CollectionTaskOps(task)
+  implicit def collectionTaskOps[F[_]: FutureConcurrentEffect](task: F[BSONCollection]): CollectionTaskOps[F] =
+    new CollectionTaskOps(task)
 
-  final class CollectionTaskOps(private val collectionTask: Task[BSONCollection]) extends AnyVal {
-    def executeOnCollection[K](action: ExecutionContext => BSONCollection => Future[K]): Task[K] = {
-      collectionTask.flatMap { coll =>
-        Task.deferFutureAction { implicit sc =>
-          action(sc)(coll)
-        }
-      }
-    }
+  final class CollectionTaskOps[F[_]: FutureConcurrentEffect](collectionTask: F[BSONCollection]) {
+    def executeOnCollection[K](action: ExecutionContext => BSONCollection => Future[K]): F[K] =
+      for {
+        collection <- collectionTask
+        result     <- FutureConcurrentEffect[F].wrapFuture(implicit sc => action(sc)(collection))
+      } yield result
   }
 
 }

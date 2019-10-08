@@ -1,24 +1,29 @@
 package com.timesheet.core.db
 
+import cats.implicits._
+import com.timesheet.concurrent.FutureConcurrentEffect
 import monix.eval.Task
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 
 import scala.util.Try
 
-trait MongoDriverMixin {
+trait MongoDriverMixin[F[_]] {
   import MongoDriverMixin._
-  protected def connection: Task[MongoConnection] = Task.fromTry(Connection)
+  protected def connection(implicit F: FutureConcurrentEffect[F]): F[MongoConnection] =
+    F.async(_.apply(Connection.toEither))
 
-  protected def getDatabase(dbName: String): Task[DefaultDB] =
-    connection
-      .flatMap(conn => Task.deferFutureAction(implicit sc => conn.database(dbName)))
+  protected def getDatabase(dbName: String)(implicit F: FutureConcurrentEffect[F]): F[DefaultDB] =
+    for {
+      conn <- connection
+      db   <- F.wrapFuture(implicit sc => conn.database(dbName))
+    } yield db
 
-  protected def getCollection(collectionName: String): Task[BSONCollection] =
+  protected def getCollection(collectionName: String)(implicit F: FutureConcurrentEffect[F]): F[BSONCollection] =
     getDatabase("Timesheet")
       .map(_.collection(collectionName))
 
-  protected val collection: Task[BSONCollection]
+  protected val collection: F[BSONCollection]
 
 }
 

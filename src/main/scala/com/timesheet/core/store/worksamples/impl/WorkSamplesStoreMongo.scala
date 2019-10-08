@@ -1,7 +1,9 @@
 package com.timesheet
 package core.store.worksamples.impl
 
+import cats.implicits._
 import cats.data.OptionT
+import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.{MongoDriverMixin, MongoStoreUtils}
 import com.timesheet.core.store.worksamples.WorkSamplesStoreAlgebra
 import com.timesheet.model.db.ID
@@ -12,10 +14,13 @@ import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriverMixin with MongoStoreUtils {
-  protected val collection: Task[BSONCollection] = getCollection("workSamples")
+class WorkSamplesStoreMongo[F[_]: FutureConcurrentEffect]
+    extends WorkSamplesStoreAlgebra[F]
+    with MongoDriverMixin[F]
+    with MongoStoreUtils[F] {
+  protected val collection: F[BSONCollection] = getCollection("workSamples")
 
-  override def create(workSample: WorkSample): Task[WorkSample] = {
+  override def create(workSample: WorkSample): F[WorkSample] = {
     import WorkSample.workSampleHandler
 
     for {
@@ -23,7 +28,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
     } yield workSample
   }
 
-  override def update(workSample: WorkSample): OptionT[Task, WorkSample] =
+  override def update(workSample: WorkSample): OptionT[F, WorkSample] =
     OptionT.liftF {
       for {
         selector <- getIdSelector(workSample.id)
@@ -31,7 +36,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
       } yield workSample
     }
 
-  override def get(id: ID): OptionT[Task, WorkSample] =
+  override def get(id: ID): OptionT[F, WorkSample] =
     OptionT {
       import WorkSample.workSampleHandler
 
@@ -41,7 +46,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
       } yield workSample
     }
 
-  override def getAll(): Task[Seq[WorkSample]] = {
+  override def getAll(): F[Seq[WorkSample]] = {
     import WorkSample.workSampleHandler
 
     collection.executeOnCollection { implicit sc =>
@@ -49,7 +54,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
     }
   }
 
-  override def delete(id: ID): OptionT[Task, WorkSample] =
+  override def delete(id: ID): OptionT[F, WorkSample] =
     OptionT {
       import WorkSample.workSampleHandler
 
@@ -60,7 +65,7 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
       } yield workSample
     }
 
-  override def getAllForUser(userId: User.UserId): Task[Seq[WorkSample]] =
+  override def getAllForUser(userId: User.UserId): F[Seq[WorkSample]] =
     for {
       selector <- getUserIdSelector(userId)
       result <- collection.executeOnCollection { implicit sc =>
@@ -70,5 +75,5 @@ class WorkSamplesStoreMongo extends WorkSamplesStoreAlgebra[Task] with MongoDriv
 }
 
 object WorkSamplesStoreMongo {
-  def apply(): WorkSamplesStoreMongo = new WorkSamplesStoreMongo()
+  def apply[F[_]: FutureConcurrentEffect]: WorkSamplesStoreMongo[F] = new WorkSamplesStoreMongo[F]()
 }

@@ -2,20 +2,25 @@ package com.timesheet
 package core.store.user.impl
 
 import cats.data.OptionT
+import cats._
+import cats.implicits._
+import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
-import monix.eval.Task
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, document}
 import tsec.authentication.IdentityStore
 
-class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, UserId, User] with MongoDriverMixin {
-  protected val collection: Task[BSONCollection] = getCollection("Users")
+class UserStoreMongo[F[_]: FutureConcurrentEffect]
+  extends UserStoreAlgebra[F]
+    with IdentityStore[F, UserId, User]
+    with MongoDriverMixin[F] {
+  protected val collection: F[BSONCollection] = getCollection("Users")
 
-  override def create(user: User): Task[User] = {
+  override def create(user: User): F[User] = {
     import User.userHandler
 
     for {
@@ -23,7 +28,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
     } yield user
   }
 
-  override def update(user: User): OptionT[Task, User] =
+  override def update(user: User): OptionT[F, User] =
     OptionT.liftF {
       import User.userHandler
 
@@ -33,7 +38,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
       } yield user
     }
 
-  override def delete(userId: UserId): OptionT[Task, User] = OptionT {
+  override def delete(userId: UserId): OptionT[F, User] = OptionT {
     {
       import User.userHandler
 
@@ -45,7 +50,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
     }
   }
 
-  override def findByUsername(username: String): OptionT[Task, User] =
+  override def findByUsername(username: String): OptionT[F, User] =
     OptionT {
       import User.userHandler
 
@@ -55,7 +60,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
       } yield user
     }
 
-  override def deleteByUsername(username: String): OptionT[Task, User] = {
+  override def deleteByUsername(username: String): OptionT[F, User] = {
     import User.userHandler
 
     for {
@@ -66,7 +71,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
     } yield user
   }
 
-  override def get(id: UserId): OptionT[Task, User] =
+  override def get(id: UserId): OptionT[F, User] =
     OptionT {
       import User.userHandler
 
@@ -76,7 +81,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
       } yield user
     }
 
-  override def getAll(): Task[Seq[User]] = {
+  override def getAll(): F[Seq[User]] = {
     import User.userHandler
 
     collection.executeOnCollection { implicit sc =>
@@ -84,7 +89,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
     }
   }
 
-  private def getUserIdSelector(userId: UserId): Task[BSONDocument] = Task.pure {
+  private def getUserIdSelector(userId: UserId): F[BSONDocument] = Monad[F].pure {
     import com.timesheet.model.user.User.UserId.userIdHandler
 
     document(
@@ -92,7 +97,7 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
     )
   }
 
-  private def getUsernameSelector(username: String): Task[BSONDocument] = Task.pure {
+  private def getUsernameSelector(username: String): F[BSONDocument] = Monad[F].pure {
     document(
       "username" -> username,
     )
@@ -100,5 +105,5 @@ class UserStoreMongo extends UserStoreAlgebra[Task] with IdentityStore[Task, Use
 }
 
 object UserStoreMongo {
-  def apply(): UserStoreMongo = new UserStoreMongo()
+  def apply[F[_]: FutureConcurrentEffect]: UserStoreMongo[F] = new UserStoreMongo[F]()
 }
