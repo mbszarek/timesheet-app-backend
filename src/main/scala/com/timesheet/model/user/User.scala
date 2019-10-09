@@ -3,7 +3,7 @@ package com.timesheet.model.user
 import cats.Applicative
 import com.timesheet.model.user.User._
 import javax.xml.bind.DatatypeConverter
-import reactivemongo.bson.{BSONDocument, BSONDocumentHandler, BSONHandler, BSONObjectID, Macros}
+import reactivemongo.bson.{BSONDocumentHandler, BSONHandler, BSONObjectID, Macros}
 import reactivemongo.bson.Macros.Annotations.Key
 import tsec.authorization.AuthorizationInfo
 

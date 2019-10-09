@@ -12,7 +12,7 @@ class FutureConcurrentEffectForTask(implicit sc: Scheduler, opts: Task.Options)
     with FutureConcurrentEffect[Task] {
 
   override def wrapFuture[A](future: ExecutionContext => Future[A]): Task[A] =
-    Task.deferFutureAction(sc => future(sc))
+    Task.deferFutureAction(future)
 }
 
 object FutureConcurrentEffectForTask {

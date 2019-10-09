@@ -1,11 +1,11 @@
-package com.timesheet.core.store.worksamples
+package com.timesheet.core.store.worksample
 
 import cats.data._
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User.UserId
 import com.timesheet.model.worksample.WorkSample
 
-trait WorkSamplesStoreAlgebra[F[_]] {
+trait WorkSampleStoreAlgebra[F[_]] {
   def create(workSample: WorkSample): F[WorkSample]
 
   def update(workSample: WorkSample): OptionT[F, WorkSample]

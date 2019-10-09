@@ -1,21 +1,20 @@
 package com.timesheet
-package core.store.worksamples.impl
+package core.store.worksample.impl
 
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.{MongoDriverMixin, MongoStoreUtils}
-import com.timesheet.core.store.worksamples.WorkSamplesStoreAlgebra
+import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User
 import com.timesheet.model.worksample.WorkSample
-import monix.eval.Task
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-class WorkSamplesStoreMongo[F[_]: FutureConcurrentEffect]
-    extends WorkSamplesStoreAlgebra[F]
+class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
+    extends WorkSampleStoreAlgebra[F]
     with MongoDriverMixin[F]
     with MongoStoreUtils[F] {
   protected val collection: F[BSONCollection] = getCollection("workSamples")
@@ -74,6 +73,6 @@ class WorkSamplesStoreMongo[F[_]: FutureConcurrentEffect]
     } yield result
 }
 
-object WorkSamplesStoreMongo {
-  def apply[F[_]: FutureConcurrentEffect]: WorkSamplesStoreMongo[F] = new WorkSamplesStoreMongo[F]()
+object WorkSampleStoreMongo {
+  def apply[F[_]: FutureConcurrentEffect]: WorkSampleStoreMongo[F] = new WorkSampleStoreMongo[F]()
 }

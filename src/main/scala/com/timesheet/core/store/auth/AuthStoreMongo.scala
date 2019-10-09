@@ -2,7 +2,6 @@ package com.timesheet
 package core.store.auth
 
 import java.time.Instant
-import cats._
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
@@ -77,13 +76,13 @@ class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
     }
   }
 
-  private def getIdSelector(id: SecureRandomId): F[BSONDocument] = Monad[F].pure {
+  private def getIdSelector(id: SecureRandomId): F[BSONDocument] = {
     import com.timesheet.core.db.BSONInstances.secureRandomIdWriter
 
     document(
       "id" -> id
     )
-  }
+  }.pure[F]
 }
 
 object AuthStoreMongo {

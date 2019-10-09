@@ -2,7 +2,6 @@ package com.timesheet
 package core.store.user.impl
 
 import cats.data.OptionT
-import cats._
 import cats.implicits._
 import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.MongoDriverMixin
@@ -15,7 +14,7 @@ import reactivemongo.bson.{BSONDocument, document}
 import tsec.authentication.IdentityStore
 
 class UserStoreMongo[F[_]: FutureConcurrentEffect]
-  extends UserStoreAlgebra[F]
+    extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {
   protected val collection: F[BSONCollection] = getCollection("Users")
@@ -34,6 +33,7 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
 
       for {
         selector <- getUserIdSelector(user.id)
+        x        <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
         _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, user))
       } yield user
     }
@@ -89,19 +89,19 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
     }
   }
 
-  private def getUserIdSelector(userId: UserId): F[BSONDocument] = Monad[F].pure {
+  private def getUserIdSelector(userId: UserId): F[BSONDocument] = {
     import com.timesheet.model.user.User.UserId.userIdHandler
 
     document(
       "_id" -> userId,
     )
-  }
+  }.pure[F]
 
-  private def getUsernameSelector(username: String): F[BSONDocument] = Monad[F].pure {
+  private def getUsernameSelector(username: String): F[BSONDocument] = {
     document(
       "username" -> username,
     )
-  }
+  }.pure[F]
 }
 
 object UserStoreMongo {

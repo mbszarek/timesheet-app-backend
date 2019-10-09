@@ -3,7 +3,7 @@ package com.timesheet.init
 import cats.effect.ConcurrentEffect
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import com.timesheet.core.service.user.UserService
+import com.timesheet.core.service.user.impl.UserService
 import com.timesheet.model.user.User.UserId
 import com.timesheet.model.user.{Role, User}
 import tsec.passwordhashers.PasswordHasher
