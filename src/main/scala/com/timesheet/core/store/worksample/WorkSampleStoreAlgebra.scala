@@ -1,6 +1,6 @@
 package com.timesheet.core.store.worksample
 
-import java.time.Instant
+import java.time.LocalDateTime
 import cats.data._
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User.UserId
@@ -15,7 +15,7 @@ trait WorkSampleStoreAlgebra[F[_]] {
 
   def getAll(): F[Seq[WorkSample]]
 
-  def getAllForUserBetweenDates(userId: UserId, from: Instant, to: Instant): F[Seq[WorkSample]]
+  def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[Seq[WorkSample]]
 
   def getAllForUser(userId: UserId): F[Seq[WorkSample]]
 

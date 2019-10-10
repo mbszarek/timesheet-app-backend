@@ -1,7 +1,7 @@
 package com.timesheet
 package core.store.worksample.impl
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 
 import cats.implicits._
 import cats.data.OptionT
@@ -48,9 +48,9 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
       } yield workSample
     }
 
-  def getAllForUserBetweenDates(userId: UserId, from: Instant, to: Instant): F[Seq[WorkSample]] =
+  def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[Seq[WorkSample]] =
     for {
-      selector    <- getIdAndDateSelector(userId, from, to)
+      selector    <- getIdAndDateSelector(userId, from.toInstant(ZoneOffset.UTC), to.toInstant(ZoneOffset.UTC))
       workSamples <- collection.executeOnCollection(implicit sc => _.findSeq[WorkSample](selector))
     } yield workSamples
 

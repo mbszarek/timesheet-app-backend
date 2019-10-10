@@ -8,5 +8,5 @@ import com.timesheet.model.user.User.UserId
 import scala.concurrent.duration._
 
 trait WorkServiceAlgebra[F[_]] {
-  def collectDayWorkTimeForUser(userId: UserId, day: LocalDate): OptionT[F, FiniteDuration]
+  def collectDayWorkTimeForUser(userId: UserId, day: LocalDate): F[FiniteDuration]
 }
