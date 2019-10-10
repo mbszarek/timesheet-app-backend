@@ -21,7 +21,7 @@ class WorkService[F[_]: FutureConcurrentEffect](workSampleStore: WorkSampleStore
 
     for {
       workSamples <- workSampleStore.getAllForUserBetweenDates(userId, fromDate, toDate)
-      result           <- Sync[F].delay(countTime(workSamples.toList))
+      result      <- Sync[F].delay(countTime(workSamples.toList))
     } yield result
   }
 
@@ -45,4 +45,9 @@ class WorkService[F[_]: FutureConcurrentEffect](workSampleStore: WorkSampleStore
       }).milli
       countTime(tail, newTotalTime)
   }
+}
+
+object WorkService {
+  def apply[F[_]: FutureConcurrentEffect](workSampleStore: WorkSampleStoreAlgebra[F]): WorkService[F] =
+    new WorkService[F](workSampleStore)
 }

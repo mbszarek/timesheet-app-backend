@@ -1,9 +1,12 @@
 package com.timesheet.endpoint.worksample
 
+import java.time.LocalDate
+
 import cats.effect.Sync
 import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserServiceAlgebra
+import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.service.worksample.WorkSampleServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
@@ -21,6 +24,7 @@ import tsec.jwt.algorithms.JWTMacAlgo
 class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   private def logWorkEndpoint(
     userService: UserServiceAlgebra[F],
+    workService: WorkServiceAlgebra[F],
     workSampleService: WorkSampleServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
     case POST -> Root / "start" asAuthed user =>
@@ -35,15 +39,22 @@ class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         result           <- handleEitherToJson(workSampleEither)
       } yield result
 
+    case GET -> Root asAuthed user =>
+      for {
+        time   <- workService.collectDayWorkTimeForUser(user.id, LocalDate.now())
+        result <- Ok(time.toString().asJson)
+      } yield result
+
   }
 
   def endpoints(
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     userService: UserServiceAlgebra[F],
+    workService: WorkServiceAlgebra[F],
     workSampleService: WorkSampleServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRoles {
-      logWorkEndpoint(userService, workSampleService)
+      logWorkEndpoint(userService, workService, workSampleService)
     }
 
     auth.liftService(allRolesRoutes)
@@ -61,6 +72,7 @@ object WorkSampleEndpoint {
   def endpoint[F[_]: Sync, Auth: JWTMacAlgo](
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     userService: UserServiceAlgebra[F],
+    workService: WorkServiceAlgebra[F],
     workSampleService: WorkSampleServiceAlgebra[F],
-  ): HttpRoutes[F] = new WorkSampleEndpoint[F, Auth].endpoints(auth, userService, workSampleService)
+  ): HttpRoutes[F] = new WorkSampleEndpoint[F, Auth].endpoints(auth, userService, workService, workSampleService)
 }
