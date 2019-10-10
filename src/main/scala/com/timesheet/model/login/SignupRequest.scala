@@ -3,6 +3,10 @@ package com.timesheet.model.login
 import com.timesheet.model.user.{Role, User}
 import com.timesheet.model.user.User.UserId
 import tsec.passwordhashers.PasswordHash
+import cats.effect._
+import io.circe.generic.auto._
+import org.http4s.EntityDecoder
+import org.http4s.circe._
 
 final case class SignupRequest(
   username: String,
@@ -24,4 +28,8 @@ final case class SignupRequest(
     role = role,
     isCurrentlyAtWork = None,
   )
+}
+
+object SignupRequest {
+  implicit def signupRequestDecoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
 }

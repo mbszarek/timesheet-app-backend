@@ -13,19 +13,15 @@ import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import io.circe.generic.auto._
 import io.circe.syntax._
+import org.http4s.HttpRoutes
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.{EntityDecoder, HttpRoutes}
 import tsec.authentication._
 import tsec.common.Verified
 import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.passwordhashers.{PasswordHash, PasswordHasher}
 
 class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
-  implicit val userDecoder: EntityDecoder[F, User]               = jsonOf
-  implicit val loginReqDecoder: EntityDecoder[F, LoginRequest]   = jsonOf
-  implicit val signupReqDecoder: EntityDecoder[F, SignupRequest] = jsonOf
-
   private def loginEndpoint(
     userService: UserServiceAlgebra[F],
     cryptService: PasswordHasher[F, A],

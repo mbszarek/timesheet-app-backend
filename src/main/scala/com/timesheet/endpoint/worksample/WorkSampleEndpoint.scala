@@ -12,6 +12,7 @@ import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
+import com.timesheet.model.work.WorkTime
 import com.timesheet.model.worksample.WorkSample
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -42,7 +43,7 @@ class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     case GET -> Root asAuthed user =>
       for {
         time   <- workService.collectDayWorkTimeForUser(user.id, LocalDate.now())
-        result <- Ok(time.toString().asJson)
+        result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
       } yield result
 
   }
@@ -61,11 +62,9 @@ class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   }
 
   private def handleEitherToJson(value: Either[WorkSampleValidationError, WorkSample]): F[Response[F]] =
-    value.fold({ error =>
-      BadRequest(error.asJson)
-    }, { workSample =>
-      Created(workSample.asJson)
-    })
+    value.swap
+      .map(error => BadRequest(error.asJson))
+      .getOrElse(Created())
 }
 
 object WorkSampleEndpoint {

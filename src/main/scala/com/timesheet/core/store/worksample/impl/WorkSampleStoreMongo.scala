@@ -85,7 +85,7 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
     import com.timesheet.core.db.BSONInstances.instantHandler
 
     document(
-      "_id" -> userId,
+      "userId" -> userId,
       "date" -> document(
         "$gte" -> from,
         "$lt"  -> to,
