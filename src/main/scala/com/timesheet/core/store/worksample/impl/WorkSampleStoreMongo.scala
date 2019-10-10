@@ -1,6 +1,8 @@
 package com.timesheet
 package core.store.worksample.impl
 
+import java.time.Instant
+
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
@@ -8,10 +10,11 @@ import com.timesheet.core.db.{MongoDriverMixin, MongoStoreUtils}
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User
+import com.timesheet.model.user.User.UserId
 import com.timesheet.model.worksample.WorkSample
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.{BSONDocument, document}
 
 class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
     extends WorkSampleStoreAlgebra[F]
@@ -19,7 +22,7 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
     with MongoStoreUtils[F] {
   protected val collection: F[BSONCollection] = getCollection("workSamples")
 
-  override def create(workSample: WorkSample): F[WorkSample] = {
+  def create(workSample: WorkSample): F[WorkSample] = {
     import WorkSample.workSampleHandler
 
     for {
@@ -27,7 +30,7 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
     } yield workSample
   }
 
-  override def update(workSample: WorkSample): OptionT[F, WorkSample] =
+  def update(workSample: WorkSample): OptionT[F, WorkSample] =
     OptionT.liftF {
       for {
         selector <- getIdSelector(workSample.id)
@@ -35,7 +38,7 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
       } yield workSample
     }
 
-  override def get(id: ID): OptionT[F, WorkSample] =
+  def get(id: ID): OptionT[F, WorkSample] =
     OptionT {
       import WorkSample.workSampleHandler
 
@@ -45,15 +48,21 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
       } yield workSample
     }
 
-  override def getAll(): F[Seq[WorkSample]] = {
+  def getAllForUserBetweenDates(userId: UserId, from: Instant, to: Instant): F[Seq[WorkSample]] =
+    for {
+      selector    <- getIdAndDateSelector(userId, from, to)
+      workSamples <- collection.executeOnCollection(implicit sc => _.findSeq[WorkSample](selector))
+    } yield workSamples
+
+  def getAll(): F[Seq[WorkSample]] = {
     import WorkSample.workSampleHandler
 
     collection.executeOnCollection { implicit sc =>
-      _.find(BSONDocument(), None).cursor[WorkSample]().collect[Seq](-1, Cursor.FailOnError[Seq[WorkSample]]())
+      _.findSeq[WorkSample](document())
     }
   }
 
-  override def delete(id: ID): OptionT[F, WorkSample] =
+  def delete(id: ID): OptionT[F, WorkSample] =
     OptionT {
       import WorkSample.workSampleHandler
 
@@ -64,13 +73,25 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
       } yield workSample
     }
 
-  override def getAllForUser(userId: User.UserId): F[Seq[WorkSample]] =
+  def getAllForUser(userId: User.UserId): F[Seq[WorkSample]] =
     for {
       selector <- getUserIdSelector(userId)
       result <- collection.executeOnCollection { implicit sc =>
         _.find(selector, None).cursor[WorkSample]().collect[Seq](-1, Cursor.FailOnError[Seq[WorkSample]]())
       }
     } yield result
+
+  private def getIdAndDateSelector(userId: UserId, from: Instant, to: Instant): F[BSONDocument] = {
+    import com.timesheet.core.db.BSONInstances.instantHandler
+
+    document(
+      "_id" -> userId,
+      "date" -> document(
+        "$gte" -> from,
+        "$lt"  -> to,
+      )
+    )
+  }.pure[F]
 }
 
 object WorkSampleStoreMongo {
