@@ -8,6 +8,8 @@ import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
+import org.mongodb.scala.MongoCollection
+import org.mongodb.scala.model.Filters._
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, document}
@@ -17,13 +19,16 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
     extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {
-  protected val collection: F[BSONCollection] = getCollection("Users")
+  override type T = User
+
+  protected val collection: F[MongoCollection[User]] = getCollection("Users")
 
   override def create(user: User): F[User] = {
     import User.userHandler
 
     for {
-      _ <- collection.executeOnCollection(implicit sc => _.insert.one(user))
+      coll <- collection
+      _    <- coll.insertOne(user).toFS2.drain
     } yield user
   }
 
@@ -32,9 +37,8 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
       import User.userHandler
 
       for {
-        selector <- getUserIdSelector(user.id)
-        x        <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
-        _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, user))
+        coll <- collection
+        _    <- coll.findOneAndReplace(equal("_id", user.id), user).toFS2.drain
       } yield user
     }
 
@@ -43,9 +47,8 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
       import User.userHandler
 
       for {
-        selector <- getUserIdSelector(userId)
-        user     <- collection.executeOnCollection[Option[User]](implicit sc => _.find(selector, None).one)
-        _        <- collection.executeOnCollection[Int](implicit sc => _.delete.element(user.get).map(_.limit))
+        coll <- collection
+        user <- coll.findOneAndDelete(equal("_id", userId)).toFS2.last
       } yield user
     }
   }
@@ -55,8 +58,8 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
       import User.userHandler
 
       for {
-        selector <- getUsernameSelector(username)
-        user     <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
+        coll <- collection
+        user <- coll.find(equal("username", username)).toFS2.last
       } yield user
     }
 
@@ -65,9 +68,8 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
 
     for {
       user <- findByUsername(username)
-      _ <- OptionT.liftF {
-        collection.executeOnCollection(implicit sc => _.delete.one(user))
-      }
+      coll <- OptionT.liftF(collection)
+      _    <- OptionT.liftF(coll.deleteOne(equal("_id", user.id)).toFS2.drain)
     } yield user
   }
 
@@ -76,26 +78,19 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
       import User.userHandler
 
       for {
-        selector <- getUserIdSelector(id)
-        user     <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
+        coll <- collection
+        user <- coll.find(equal("_id", id)).toFS2.last
       } yield user
     }
 
   override def getAll(): F[List[User]] = {
     import User.userHandler
 
-    collection.executeOnCollection { implicit sc =>
-      _.findList[User](document())
-    }
+    for {
+      coll     <- collection
+      userList <- coll.find().toFS2.toList
+    } yield userList
   }
-
-  private def getUserIdSelector(userId: UserId): F[BSONDocument] = {
-    import com.timesheet.model.user.User.UserId.userIdHandler
-
-    document(
-      "_id" -> userId,
-    )
-  }.pure[F]
 
   private def getUsernameSelector(username: String): F[BSONDocument] = {
     document(

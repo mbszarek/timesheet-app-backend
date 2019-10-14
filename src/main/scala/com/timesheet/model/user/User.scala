@@ -9,11 +9,12 @@ import reactivemongo.bson.{BSONDocumentHandler, BSONHandler, BSONObjectID, Macro
 import reactivemongo.bson.Macros.Annotations.Key
 import tsec.authorization.AuthorizationInfo
 import cats.effect._
+import com.avsystem.commons.serialization.{GenCodec, name, transparent}
 import io.circe.generic.auto._
 import org.http4s.circe._
 
 final case class User(
-  @Key("_id") id: UserId,
+  @name("_id") @Key("_id") id: UserId,
   username: String,
   firstName: String,
   lastName: String,
@@ -25,9 +26,14 @@ final case class User(
 )
 
 object User {
+  implicit val Codec: GenCodec[User] = GenCodec.materialize
+
+  @transparent
   final case class UserId(id: String)
 
   object UserId {
+    implicit val Codec: GenCodec[UserId] = GenCodec.materialize
+
     def createNew(): UserId = UserId(BSONObjectID.generate().stringify)
 
     implicit val userIdHandler: BSONHandler[BSONObjectID, UserId] = new BSONHandler[BSONObjectID, UserId] {

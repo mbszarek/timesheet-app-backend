@@ -2,11 +2,13 @@ package com.timesheet
 package core.store.auth
 
 import java.time.Instant
+
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.model.user.User.UserId
+import org.mongodb.scala.MongoCollection
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader, BSONDocumentWriter, document}
 import tsec.authentication.{AugmentedJWT, BackingStore}
@@ -14,6 +16,7 @@ import tsec.common.SecureRandomId
 import tsec.jws.JWSSerializer
 import tsec.jws.mac.{JWSMacCV, JWSMacHeader, JWTMacImpure}
 import tsec.mac.jca.{MacErrorM, MacSigningKey}
+import org.mongodb.scala.model.Filters._
 
 class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
   implicit hs: JWSSerializer[JWSMacHeader[A]],
@@ -22,23 +25,26 @@ class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
     with MongoDriverMixin[F] {
   import AuthStoreMongo._
 
-  protected val collection: F[BSONCollection] = getCollection("auth")
+  override type T = AugmentedJWT[A, UserId]
+
+  protected val collection: F[MongoCollection[AugmentedJWT[A, UserId]]] = getCollection("auth")
 
   override def put(elem: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] =
     for {
-      _ <- collection.executeOnCollection(implicit sc => _.insert.one(elem))
+      coll <- collection
+      _    <- coll.insertOne(elem).toFS2.drain
     } yield elem
 
   override def update(v: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] =
     for {
-      selector <- getIdSelector(v.id)
-      _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, v))
+      coll <- collection
+      _    <- coll.replaceOne(equal("_id", v.id), v).toFS2.drain
     } yield v
 
   override def delete(id: SecureRandomId): F[Unit] =
     for {
-      selector <- getIdSelector(id)
-      _        <- collection.executeOnCollection(implicit sc => _.delete.one(selector))
+      coll <- collection
+      _    <- coll.deleteOne(equal("id", id)).toFS2.drain
     } yield ()
 
   override def get(id: SecureRandomId): OptionT[F, AugmentedJWT[A, UserId]] = {
@@ -70,19 +76,11 @@ class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
 
     OptionT {
       for {
-        selector <- getIdSelector(id)
-        entity   <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
+        coll     <- collection
+        entity   <- coll.find(equal("_id", id)).toFS2.last
       } yield entity
     }
   }
-
-  private def getIdSelector(id: SecureRandomId): F[BSONDocument] = {
-    import com.timesheet.core.db.BSONInstances.secureRandomIdWriter
-
-    document(
-      "id" -> id
-    )
-  }.pure[F]
 }
 
 object AuthStoreMongo {
