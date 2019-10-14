@@ -17,6 +17,7 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
+import org.http4s.dsl.impl.QueryParamDecoderMatcher
 import org.http4s.{HttpRoutes, QueryParamDecoder, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
@@ -42,12 +43,16 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
     case GET -> Root / "getForToday" asAuthed user =>
       for {
-        time   <- workService.collectDayWorkTimeForUser(user.id, LocalDate.now())
+        date   <- Sync[F].delay(LocalDate.now())
+        time   <- workService.collectWorkTimeForUserBetweenDates(user.id, date, date.plusDays(1))
         result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
       } yield result
 
-    case GET -> Root / "getForDate" :? QueryParamDecoderMatcher[String]("from")(country) asAuthed user =>
-    ???
+    case GET -> Root / "getForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
+      for {
+        time   <- workService.collectWorkTimeForUserBetweenDates(user.id, fromDate, toDate)
+        result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
+      } yield result
 
   }
 
@@ -78,4 +83,8 @@ object WorkEndpoint {
 
   implicit val dateQueryParamDecoder: QueryParamDecoder[LocalDate] =
     QueryParamDecoder[String].map(LocalDate.parse)
+
+  object FromLocalDateMatcher extends QueryParamDecoderMatcher[LocalDate]("from")
+
+  object ToLocalDateMatcher extends QueryParamDecoderMatcher[LocalDate]("to")
 }

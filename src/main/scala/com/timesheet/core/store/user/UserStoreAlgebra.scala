@@ -11,7 +11,7 @@ trait UserStoreAlgebra[F[_]] {
 
   def get(userId: UserId): OptionT[F, User]
 
-  def getAll(): F[Seq[User]]
+  def getAll(): F[List[User]]
 
   def delete(userId: UserId): OptionT[F, User]
 

@@ -15,7 +15,7 @@ trait WorkSampleStoreAlgebra[F[_]] {
 
   def getAll(): F[List[WorkSample]]
 
-  def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[Seq[WorkSample]]
+  def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[List[WorkSample]]
 
   def getAllForUser(userId: UserId): F[List[WorkSample]]
 

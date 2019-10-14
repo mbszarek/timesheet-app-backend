@@ -1,6 +1,6 @@
 package com.timesheet.core.service.work.impl
 
-import java.time.{Instant, LocalDate, ZoneId, ZoneOffset}
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import cats.data._
 import cats.effect._
@@ -39,13 +39,13 @@ class WorkService[F[_]: FutureConcurrentEffect](
       workSample <- EitherT.liftF(workSampleStore.create(createWorkSample(user.id, Departure)))
     } yield workSample
 
-  def collectDayWorkTimeForUser(userId: User.UserId, day: LocalDate): F[FiniteDuration] = {
-    val fromDate = day.atStartOfDay()
-    val toDate   = fromDate.plusDays(1)
+  def collectWorkTimeForUserBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[FiniteDuration] = {
+    val fromDate = from.atStartOfDay()
+    val toDate   = to.plusDays(1).atStartOfDay()
 
     for {
       workSamples <- workSampleStore.getAllForUserBetweenDates(userId, fromDate, toDate)
-      result      <- Sync[F].delay(countTime(workSamples.toList))
+      result      <- Sync[F].delay(countTime(workSamples))
     } yield result
   }
 
@@ -77,10 +77,16 @@ class WorkService[F[_]: FutureConcurrentEffect](
         case Departure =>
           sample.date.toEpochMilli - date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli
         case Entrance =>
+          import com.timesheet.util.InstantTypeClassInstances.instantOrderInstance
+
           date
             .plusDays(1)
             .atStartOfDay()
-            .toInstant(ZoneOffset.UTC)
+            .atZone(ZoneId.systemDefault())
+            .toInstant
+            .min {
+              ZonedDateTime.now().toInstant
+            }
             .toEpochMilli - sample.date.toEpochMilli
       }).milli
       countTime(tail, newTotalTime)

@@ -81,11 +81,11 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
       } yield user
     }
 
-  override def getAll(): F[Seq[User]] = {
+  override def getAll(): F[List[User]] = {
     import User.userHandler
 
     collection.executeOnCollection { implicit sc =>
-      _.find(BSONDocument(), None).cursor[User]().collect[Seq](-1, Cursor.FailOnError[Seq[User]]())
+      _.findList[User](document())
     }
   }
 

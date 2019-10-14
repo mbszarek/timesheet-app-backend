@@ -16,8 +16,7 @@ package object timesheet {
   implicit def bsonCollectionOps[T](collection: BSONCollection): BSONCollectionOps =
     new BSONCollectionOps(collection)
 
-  final class CollectionTaskOps[F[_]: FutureConcurrentEffect](private val collectionTask: F[BSONCollection])
-      extends AnyVal {
+  final class CollectionTaskOps[F[_]: FutureConcurrentEffect](collectionTask: F[BSONCollection]) {
     def executeOnCollection[K](action: ExecutionContext => BSONCollection => Future[K]): F[K] =
       for {
         collection <- collectionTask

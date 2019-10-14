@@ -19,5 +19,5 @@ trait UserServiceAlgebra[F[_]] {
 
   def delete(userId: UserId): EitherT[F, UserDoesNotExists.type, User]
 
-  def getAll(): F[Seq[User]]
+  def getAll(): F[List[User]]
 }

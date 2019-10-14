@@ -15,5 +15,5 @@ trait WorkServiceAlgebra[F[_]] {
 
   def tagWorkerExit(user: User): EitherT[F, WorkSampleValidationError, WorkSample]
 
-  def collectDayWorkTimeForUser(userId: UserId, day: LocalDate): F[FiniteDuration]
+  def collectWorkTimeForUserBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[FiniteDuration]
 }
