@@ -17,11 +17,13 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.{HttpRoutes, Response}
+import org.http4s.{HttpRoutes, QueryParamDecoder, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
 
 class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+  import WorkEndpoint._
+
   private def logWorkEndpoint(
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
@@ -38,11 +40,14 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         result           <- handleEitherToJson(workSampleEither)
       } yield result
 
-    case GET -> Root asAuthed user =>
+    case GET -> Root / "getForToday" asAuthed user =>
       for {
         time   <- workService.collectDayWorkTimeForUser(user.id, LocalDate.now())
         result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
       } yield result
+
+    case GET -> Root / "getForDate" :? QueryParamDecoderMatcher[String]("from")(country) asAuthed user =>
+    ???
 
   }
 
@@ -70,4 +75,7 @@ object WorkEndpoint {
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = new WorkEndpoint[F, Auth].endpoints(auth, userService, workService)
+
+  implicit val dateQueryParamDecoder: QueryParamDecoder[LocalDate] =
+    QueryParamDecoder[String].map(LocalDate.parse)
 }
