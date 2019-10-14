@@ -7,7 +7,6 @@ import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
-import com.timesheet.core.service.worksample.WorkSampleServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.user.User
@@ -22,21 +21,20 @@ import org.http4s.{HttpRoutes, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
 
-class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   private def logWorkEndpoint(
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
-    workSampleService: WorkSampleServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
     case POST -> Root / "start" asAuthed user =>
       for {
-        workSampleEither <- workSampleService.tagWorkerEntrance(user).value
+        workSampleEither <- workService.tagWorkerEntrance(user).value
         result           <- handleEitherToJson(workSampleEither)
       } yield result
 
     case POST -> Root / "end" asAuthed user =>
       for {
-        workSampleEither <- workSampleService.tagWorkerExit(user).value
+        workSampleEither <- workService.tagWorkerExit(user).value
         result           <- handleEitherToJson(workSampleEither)
       } yield result
 
@@ -52,10 +50,9 @@ class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
-    workSampleService: WorkSampleServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRoles {
-      logWorkEndpoint(userService, workService, workSampleService)
+      logWorkEndpoint(userService, workService)
     }
 
     auth.liftService(allRolesRoutes)
@@ -67,11 +64,10 @@ class WorkSampleEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       .getOrElse(Created())
 }
 
-object WorkSampleEndpoint {
+object WorkEndpoint {
   def endpoint[F[_]: Sync, Auth: JWTMacAlgo](
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
-    workSampleService: WorkSampleServiceAlgebra[F],
-  ): HttpRoutes[F] = new WorkSampleEndpoint[F, Auth].endpoints(auth, userService, workService, workSampleService)
+  ): HttpRoutes[F] = new WorkEndpoint[F, Auth].endpoints(auth, userService, workService)
 }

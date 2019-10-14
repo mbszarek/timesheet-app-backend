@@ -51,14 +51,14 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
   def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[Seq[WorkSample]] =
     for {
       selector    <- getIdAndDateSelector(userId, from.toInstant(ZoneOffset.UTC), to.toInstant(ZoneOffset.UTC))
-      workSamples <- collection.executeOnCollection(implicit sc => _.findSeq[WorkSample](selector))
+      workSamples <- collection.executeOnCollection(implicit sc => _.findList[WorkSample](selector))
     } yield workSamples
 
-  def getAll(): F[Seq[WorkSample]] = {
+  def getAll(): F[List[WorkSample]] = {
     import WorkSample.workSampleHandler
 
     collection.executeOnCollection { implicit sc =>
-      _.findSeq[WorkSample](document())
+      _.findList[WorkSample](document())
     }
   }
 
@@ -73,11 +73,11 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
       } yield workSample
     }
 
-  def getAllForUser(userId: User.UserId): F[Seq[WorkSample]] =
+  def getAllForUser(userId: User.UserId): F[List[WorkSample]] =
     for {
       selector <- getUserIdSelector(userId)
       result <- collection.executeOnCollection { implicit sc =>
-        _.find(selector, None).cursor[WorkSample]().collect[Seq](-1, Cursor.FailOnError[Seq[WorkSample]]())
+        _.findList[WorkSample](selector)
       }
     } yield result
 

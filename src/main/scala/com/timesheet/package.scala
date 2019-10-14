@@ -16,7 +16,8 @@ package object timesheet {
   implicit def bsonCollectionOps[T](collection: BSONCollection): BSONCollectionOps =
     new BSONCollectionOps(collection)
 
-  final class CollectionTaskOps[F[_]: FutureConcurrentEffect](collectionTask: F[BSONCollection]) {
+  final class CollectionTaskOps[F[_]: FutureConcurrentEffect](private val collectionTask: F[BSONCollection])
+      extends AnyVal {
     def executeOnCollection[K](action: ExecutionContext => BSONCollection => Future[K]): F[K] =
       for {
         collection <- collectionTask
@@ -25,10 +26,15 @@ package object timesheet {
   }
 
   final class BSONCollectionOps(private val collection: BSONCollection) extends AnyVal {
-    def findSeq[T](
+    def findList[T](
       selector: BSONDocument
-    )(implicit reader: Reader[T], executionContext: ExecutionContext): Future[Seq[T]] =
-      collection.find(selector, None).cursor[T]().collect[Seq](-1, Cursor.FailOnError[Seq[T]]())
+    )(implicit reader: Reader[T], executionContext: ExecutionContext): Future[List[T]] =
+      collection.find(selector, None).cursor[T]().collect[List](-1, Cursor.FailOnError[List[T]]())
+
+    def executeOnCollection[F[_]: FutureConcurrentEffect, K](
+      action: ExecutionContext => BSONCollection => Future[K]
+    ): F[K] =
+      FutureConcurrentEffect[F].wrapFuture(implicit sc => action(sc)(collection))
   }
 
 }

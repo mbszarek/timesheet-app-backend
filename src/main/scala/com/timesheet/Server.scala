@@ -5,14 +5,13 @@ import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.impl.UserService
 import com.timesheet.core.service.work.impl.WorkService
-import com.timesheet.core.service.worksample.impl.WorkSampleService
 import com.timesheet.core.store.auth.AuthStoreMongo
 import com.timesheet.core.store.user.impl.UserStoreMongo
 import com.timesheet.core.store.worksample.impl.WorkSampleStoreMongo
 import com.timesheet.core.validation.user.impl.UserValidator
 import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
-import com.timesheet.endpoint.worksample.WorkSampleEndpoint
+import com.timesheet.endpoint.worksample.WorkEndpoint
 import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
 import com.timesheet.init.InitService
 import fs2.Stream
@@ -34,8 +33,7 @@ class Server[F[_]: FutureConcurrentEffect] {
       userValidator       = UserValidator[F](userStore)
       workSampleValidator = WorkSampleValidator[F]
       userService         = UserService[F](userStore, userValidator)
-      workService         = WorkService[F](workSampleStore)
-      workSampleService   = WorkSampleService[F](userStore, workSampleStore, workSampleValidator)
+      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator)
       authenticator       = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth           = SecuredRequestHandler(authenticator)
       passwordHasher      = BCrypt.syncPasswordHasher[F]
@@ -47,7 +45,7 @@ class Server[F[_]: FutureConcurrentEffect] {
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
         "/hello" -> HelloWorldEndpoint[F, HMACSHA256](routeAuth),
         "/test"  -> TestEndpoint[F],
-        "/work"  -> WorkSampleEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService, workSampleService)
+        "/work"  -> WorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService)
       ).orNotFound
 
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
