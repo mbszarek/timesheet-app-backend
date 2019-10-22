@@ -52,7 +52,7 @@ class Server[F[_]: ConcurrentEffect] {
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
 
       exitCode <- BlazeServerBuilder[F]
-        .bindHttp(38080, "0.0.0.0")
+        .bindHttp(hostConfig.port, hostConfig.hostName)
         .withHttpApp(CORS(finalHttpApp))
         .serve
     } yield exitCode
