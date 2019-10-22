@@ -1,18 +1,13 @@
 package com.timesheet.model.db
 
-import javax.xml.bind.DatatypeConverter
-import reactivemongo.bson.{BSONHandler, BSONObjectID}
+import com.avsystem.commons.serialization.{GenCodec, transparent}
+import org.bson.types.ObjectId
 
-final case class ID(
-  value: String
-)
+@transparent
+final case class ID(value: String)
 
 object ID {
-  def createNew(): ID = ID(BSONObjectID.generate().stringify)
+  implicit val Codec: GenCodec[ID] = GenCodec.materialize
 
-  implicit val idHandler: BSONHandler[BSONObjectID, ID] = new BSONHandler[BSONObjectID, ID] {
-    override def read(bson: BSONObjectID): ID = ID(bson.stringify)
-
-    override def write(t: ID): BSONObjectID = BSONObjectID(DatatypeConverter.parseHexBinary(t.value))
-  }
+  def createNew(): ID = ID(ObjectId.get().toHexString)
 }

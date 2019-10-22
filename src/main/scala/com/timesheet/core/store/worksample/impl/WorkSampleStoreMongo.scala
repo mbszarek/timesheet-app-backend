@@ -1,97 +1,106 @@
 package com.timesheet
 package core.store.worksample.impl
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
-import com.timesheet.core.db.{MongoDriverMixin, MongoStoreUtils}
+import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import com.timesheet.model.worksample.WorkSample
-import reactivemongo.api.Cursor
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument, document}
+import org.mongodb.scala.MongoCollection
+import fs2.interop.reactivestreams._
+import org.mongodb.scala.model.Filters._
 
-class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
-    extends WorkSampleStoreAlgebra[F]
-    with MongoDriverMixin[F]
-    with MongoStoreUtils[F] {
-  protected val collection: F[BSONCollection] = getCollection("workSamples")
+import scala.reflect.ClassTag
 
-  def create(workSample: WorkSample): F[WorkSample] = {
-    import WorkSample.workSampleHandler
+class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
+  override type T = WorkSample
 
+  protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
+
+  def create(workSample: WorkSample): F[WorkSample] =
     for {
-      _ <- collection.executeOnCollection(implicit sc => _.insert.one(workSample))
+      coll <- collection
+      _ <- coll
+        .insertOne(workSample)
+        .toFS2
+        .drain
     } yield workSample
-  }
 
   def update(workSample: WorkSample): OptionT[F, WorkSample] =
     OptionT.liftF {
       for {
-        selector <- getIdSelector(workSample.id)
-        _        <- collection.executeOnCollection(implicit sc => _.update.one(selector, workSample))
+        coll <- collection
+        _ <- coll
+          .findOneAndReplace(equal("_id", workSample.id), workSample)
+          .toFS2
+          .drain
       } yield workSample
     }
 
   def get(id: ID): OptionT[F, WorkSample] =
     OptionT {
-      import WorkSample.workSampleHandler
-
       for {
-        selector   <- getIdSelector(id)
-        workSample <- collection.executeOnCollection(implicit sc => _.find(selector, None).one)
+        coll <- collection
+        workSample <- coll
+          .find(equal("_id", id))
+          .toFS2
+          .last
       } yield workSample
     }
 
   def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[List[WorkSample]] =
     for {
-      selector    <- getIdAndDateSelector(userId, from.toInstant(ZoneOffset.UTC), to.toInstant(ZoneOffset.UTC))
-      workSamples <- collection.executeOnCollection(implicit sc => _.findList[WorkSample](selector))
+      coll <- collection
+      workSamples <- coll
+        .find(
+          and(
+            equal("userId", userId),
+            and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC)))
+          )
+        )
+        .toFS2
+        .toList
     } yield workSamples
 
   def getAll(): F[List[WorkSample]] = {
-    import WorkSample.workSampleHandler
-
-    collection.executeOnCollection { implicit sc =>
-      _.findList[WorkSample](document())
-    }
+    for {
+      coll <- collection
+      workSamples <- coll
+        .find()
+        .toFS2
+        .toList
+    } yield workSamples
   }
 
   def delete(id: ID): OptionT[F, WorkSample] =
     OptionT {
-      import WorkSample.workSampleHandler
-
       for {
-        selector   <- getIdSelector(id)
-        workSample <- collection.executeOnCollection[Option[WorkSample]](implicit sc => _.find(selector, None).one)
-        _          <- collection.executeOnCollection[Int](implicit sc => _.delete.element(workSample.get).map(_.limit))
+        coll <- collection
+        workSample <- coll
+          .findOneAndDelete(equal("_id", id))
+          .asReactive
+          .toStream[F]
+          .compile
+          .last
       } yield workSample
     }
 
   def getAllForUser(userId: User.UserId): F[List[WorkSample]] =
     for {
-      selector <- getUserIdSelector(userId)
-      result <- collection.executeOnCollection { implicit sc =>
-        _.findList[WorkSample](selector)
-      }
-    } yield result
-
-  private def getIdAndDateSelector(userId: UserId, from: Instant, to: Instant): F[BSONDocument] = {
-    import com.timesheet.core.db.BSONInstances.instantHandler
-
-    document(
-      "userId" -> userId,
-      "date" -> document(
-        "$gte" -> from,
-        "$lt"  -> to,
-      )
-    )
-  }.pure[F]
+      coll <- collection
+      workSamples <- coll
+        .find(equal("userId", userId))
+        .asReactive
+        .toStream[F]
+        .compile
+        .toList
+    } yield workSamples
 }
 
 object WorkSampleStoreMongo {
