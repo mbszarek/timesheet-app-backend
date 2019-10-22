@@ -27,7 +27,7 @@ object User {
   implicit val Codec: GenCodec[User] = GenCodec.materialize
 
   @transparent
-  final case class UserId(id: String)
+  final case class UserId(value: String)
 
   object UserId {
     implicit val Codec: GenCodec[UserId] = GenCodec.materialize
