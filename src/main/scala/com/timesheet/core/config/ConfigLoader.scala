@@ -4,13 +4,12 @@ import cats.effect._
 import com.timesheet.core.config.entities.HostConfig
 import pureconfig._
 import pureconfig.generic.auto._
+import pureconfig.module.catseffect._
 
 final class ConfigLoader[F[_]: Sync] {
   def loadHostConfig(): fs2.Stream[F, HostConfig] =
     fs2.Stream.eval {
-      Sync[F].delay {
-        ConfigSource.default.loadOrThrow[HostConfig]
-      }
+      ConfigSource.default.at("hostConfig").loadF[F, HostConfig]
     }
 }
 
