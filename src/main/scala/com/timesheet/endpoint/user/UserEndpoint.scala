@@ -67,17 +67,17 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   def getAllUsersEndpoint(
     userService: UserServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
-    case GET -> Root / "me" asAuthed user =>
-      Ok(user.asJson)
+    case GET -> Root asAuthed _ =>
+      userService.getAll().flatMap { users =>
+        Ok(users.asJson)
+      }
   }
 
   def getCurrentUserEndpoint(
     userService: UserServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
-    case GET -> Root asAuthed _ =>
-      userService.getAll().flatMap { user =>
-        Ok(user.asJson)
-      }
+    case GET -> Root / "me" asAuthed user =>
+      Ok(user.asJson)
   }
 
   def endpoints(
@@ -87,7 +87,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRolesHandler {
       getAllUsersEndpoint(userService) orElse
-        getCurrentUserEndpoint(userService)
+      getCurrentUserEndpoint(userService)
     }(TSecAuthService.empty)
     val adminRoutes = Auth.adminOnly {
       signupEndpoint(userService, cryptService)
