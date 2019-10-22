@@ -1,9 +1,9 @@
 package com.timesheet
 package core.store.auth
 
+import cats.effect._
 import cats.implicits._
-import cats.data.OptionT
-import com.timesheet.concurrent.FutureConcurrentEffect
+import cats.data._
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.model.user.User.UserId
 import org.mongodb.scala.MongoCollection
@@ -14,7 +14,7 @@ import tsec.jws.mac.{JWSMacCV, JWSMacHeader}
 import tsec.mac.jca.{MacErrorM, MacSigningKey}
 import org.mongodb.scala.model.Filters._
 
-class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
+class AuthStoreMongo[F[_]: ConcurrentEffect, A](key: MacSigningKey[A])(
   implicit hs: JWSSerializer[JWSMacHeader[A]],
   s: JWSMacCV[MacErrorM, A],
 ) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]]
@@ -53,7 +53,7 @@ class AuthStoreMongo[F[_]: FutureConcurrentEffect, A](key: MacSigningKey[A])(
 }
 
 object AuthStoreMongo {
-  def apply[F[_]: FutureConcurrentEffect, A](
+  def apply[F[_]: ConcurrentEffect, A](
     key: MacSigningKey[A]
   )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[F, A] =
     new AuthStoreMongo(key)

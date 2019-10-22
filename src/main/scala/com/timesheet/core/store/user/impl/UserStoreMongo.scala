@@ -1,9 +1,9 @@
 package com.timesheet
 package core.store.user.impl
 
-import cats.data.OptionT
+import cats.effect._
+import cats.data._
 import cats.implicits._
-import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.model.user.User
@@ -12,7 +12,7 @@ import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 import tsec.authentication.IdentityStore
 
-class UserStoreMongo[F[_]: FutureConcurrentEffect]
+class UserStoreMongo[F[_]: ConcurrentEffect]
     extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {
@@ -72,5 +72,5 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
 }
 
 object UserStoreMongo {
-  def apply[F[_]: FutureConcurrentEffect]: UserStoreMongo[F] = new UserStoreMongo[F]()
+  def apply[F[_]: ConcurrentEffect]: UserStoreMongo[F] = new UserStoreMongo[F]()
 }

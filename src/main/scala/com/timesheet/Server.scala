@@ -1,7 +1,6 @@
 package com.timesheet
 
-import cats.effect.{ContextShift, Timer}
-import com.timesheet.concurrent.FutureConcurrentEffect
+import cats.effect._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.impl.UserService
 import com.timesheet.core.service.work.impl.WorkService
@@ -23,7 +22,7 @@ import tsec.authentication.SecuredRequestHandler
 import tsec.mac.jca.HMACSHA256
 import tsec.passwordhashers.jca.BCrypt
 
-class Server[F[_]: FutureConcurrentEffect] {
+class Server[F[_]: ConcurrentEffect] {
   def stream(implicit T: Timer[F], C: ContextShift[F]): Stream[F, Nothing] = {
     for {
       key <- Stream.eval(HMACSHA256.generateKey[F])
@@ -59,5 +58,5 @@ class Server[F[_]: FutureConcurrentEffect] {
 }
 
 object Server {
-  def apply[F[_]: FutureConcurrentEffect]: Server[F] = new Server[F]()
+  def apply[F[_]: ConcurrentEffect]: Server[F] = new Server[F]()
 }

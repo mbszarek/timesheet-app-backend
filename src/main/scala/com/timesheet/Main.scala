@@ -5,8 +5,6 @@ import monix.eval.{Task, TaskApp}
 import monix.execution.Scheduler
 
 object Main extends TaskApp {
-  import com.timesheet.concurrent.impl.FutureConcurrentEffectForTask._
-
   implicit val sc: Scheduler = scheduler
 
   def run(args: List[String]): Task[ExitCode] =

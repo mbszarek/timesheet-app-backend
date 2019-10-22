@@ -1,11 +1,10 @@
 package com.timesheet.core.service.work.impl
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{Instant, LocalDate, ZoneId, ZoneOffset, ZonedDateTime}
 
 import cats.data._
 import cats.effect._
 import cats.implicits._
-import com.timesheet.concurrent.FutureConcurrentEffect
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
@@ -20,7 +19,7 @@ import com.timesheet.model.worksample.{ActivityType, Departure, Entrance, WorkSa
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
-class WorkService[F[_]: FutureConcurrentEffect](
+class WorkService[F[_]: Sync](
   userStore: UserStoreAlgebra[F],
   workSampleStore: WorkSampleStoreAlgebra[F],
   workSampleValidator: WorkSampleValidatorAlgebra[F],
@@ -94,7 +93,7 @@ class WorkService[F[_]: FutureConcurrentEffect](
 }
 
 object WorkService {
-  def apply[F[_]: FutureConcurrentEffect](
+  def apply[F[_]: Sync](
     userStore: UserStoreAlgebra[F],
     workSampleStore: WorkSampleStoreAlgebra[F],
     workSampleValidator: WorkSampleValidatorAlgebra[F]
