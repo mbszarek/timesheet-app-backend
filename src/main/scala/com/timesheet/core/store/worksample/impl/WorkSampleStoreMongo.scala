@@ -6,7 +6,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import cats.implicits._
 import cats.data.OptionT
 import com.timesheet.concurrent.FutureConcurrentEffect
-import com.timesheet.core.db.{MongoDriverMixin, MongoStoreUtils}
+import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.User
@@ -18,12 +18,8 @@ import org.mongodb.scala.model.Filters._
 
 import scala.reflect.ClassTag
 
-class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
-    extends WorkSampleStoreAlgebra[F]
-    with MongoDriverMixin[F]
-    with MongoStoreUtils[F] {
+class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
   override type T = WorkSample
-
 
   protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
 
@@ -49,8 +45,6 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
 
   def get(id: ID): OptionT[F, WorkSample] =
     OptionT {
-      import WorkSample.workSampleHandler
-
       for {
         coll <- collection
         workSample <- coll
@@ -75,7 +69,6 @@ class WorkSampleStoreMongo[F[_]: FutureConcurrentEffect]
     } yield workSamples
 
   def getAll(): F[List[WorkSample]] = {
-    import WorkSample.workSampleHandler
     for {
       coll <- collection
       workSamples <- coll

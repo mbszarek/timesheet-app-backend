@@ -4,7 +4,6 @@ val Specs2Version          = "4.1.0"
 val LogbackVersion         = "1.2.3"
 val MonixVersion           = "3.0.0-RC3"
 val tsecV                  = "0.2.0-M1"
-val ReactiveMongoVersion   = "0.18.6"
 val AVSystemCommonsVersion = "2.0.0-M3"
 val MongoScalaDriver       = "2.7.0"
 val FS2Version             = "2.0.0"
@@ -40,10 +39,8 @@ lazy val root = (project in file("."))
       "io.github.jmcardon"   %% "tsec-jwt-mac"             % tsecV,
       "io.github.jmcardon"   %% "tsec-jwt-sig"             % tsecV,
       "io.github.jmcardon"   %% "tsec-http4s"              % tsecV,
-      "com.avsystem.commons" % "commons-mongo_2.12"        % AVSystemCommonsVersion,
+      "com.avsystem.commons" %% "commons-mongo"            % AVSystemCommonsVersion,
       "org.mongodb.scala"    %% "mongo-scala-driver"       % MongoScalaDriver,
-      "org.reactivemongo"    %% "reactivemongo"            % ReactiveMongoVersion,
-      "org.reactivemongo"    %% "reactivemongo-akkastream" % ReactiveMongoVersion,
       "co.fs2"               %% "fs2-reactive-streams"     % FS2Version,
       compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
       "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full

@@ -10,9 +10,6 @@ import com.timesheet.model.user.User
 import com.timesheet.model.user.User.UserId
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
-import reactivemongo.api.Cursor
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument, document}
 import tsec.authentication.IdentityStore
 
 class UserStoreMongo[F[_]: FutureConcurrentEffect]
@@ -23,19 +20,14 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
 
   protected val collection: F[MongoCollection[User]] = getCollection("Users")
 
-  override def create(user: User): F[User] = {
-    import User.userHandler
-
+  override def create(user: User): F[User] =
     for {
       coll <- collection
       _    <- coll.insertOne(user).toFS2.drain
     } yield user
-  }
 
   override def update(user: User): OptionT[F, User] =
     OptionT.liftF {
-      import User.userHandler
-
       for {
         coll <- collection
         _    <- coll.findOneAndReplace(equal("_id", user.id), user).toFS2.drain
@@ -43,60 +35,40 @@ class UserStoreMongo[F[_]: FutureConcurrentEffect]
     }
 
   override def delete(userId: UserId): OptionT[F, User] = OptionT {
-    {
-      import User.userHandler
-
-      for {
-        coll <- collection
-        user <- coll.findOneAndDelete(equal("_id", userId)).toFS2.last
-      } yield user
-    }
+    for {
+      coll <- collection
+      user <- coll.findOneAndDelete(equal("_id", userId)).toFS2.last
+    } yield user
   }
 
   override def findByUsername(username: String): OptionT[F, User] =
     OptionT {
-      import User.userHandler
-
       for {
         coll <- collection
         user <- coll.find(equal("username", username)).toFS2.last
       } yield user
     }
 
-  override def deleteByUsername(username: String): OptionT[F, User] = {
-    import User.userHandler
-
+  override def deleteByUsername(username: String): OptionT[F, User] =
     for {
       user <- findByUsername(username)
       coll <- OptionT.liftF(collection)
       _    <- OptionT.liftF(coll.deleteOne(equal("_id", user.id)).toFS2.drain)
     } yield user
-  }
 
   override def get(id: UserId): OptionT[F, User] =
     OptionT {
-      import User.userHandler
-
       for {
         coll <- collection
         user <- coll.find(equal("_id", id)).toFS2.last
       } yield user
     }
 
-  override def getAll(): F[List[User]] = {
-    import User.userHandler
-
+  override def getAll(): F[List[User]] =
     for {
       coll     <- collection
       userList <- coll.find().toFS2.toList
     } yield userList
-  }
-
-  private def getUsernameSelector(username: String): F[BSONDocument] = {
-    document(
-      "username" -> username,
-    )
-  }.pure[F]
 }
 
 object UserStoreMongo {
