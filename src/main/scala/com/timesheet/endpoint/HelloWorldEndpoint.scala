@@ -2,8 +2,7 @@ package com.timesheet.endpoint
 
 import cats.effect._
 import com.timesheet.core.auth.Auth
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.HttpRoutes

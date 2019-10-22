@@ -6,8 +6,7 @@ import cats.data._
 import cats.implicits._
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 import tsec.authentication.IdentityStore

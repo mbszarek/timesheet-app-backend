@@ -4,8 +4,7 @@ import cats.effect.ConcurrentEffect
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import com.timesheet.core.service.user.impl.UserService
-import com.timesheet.model.user.User.UserId
-import com.timesheet.model.user.{Role, User}
+import com.timesheet.model.user.{Role, User, UserId}
 import tsec.passwordhashers.PasswordHasher
 
 class InitService[F[_]: ConcurrentEffect, A](
@@ -14,11 +13,13 @@ class InitService[F[_]: ConcurrentEffect, A](
 ) {
   import InitService.{Admin, NonAdmin}
 
-  def init: F[Unit] =
-    for {
-      _ <- insertAccount(Admin)
-      _ <- insertAccount(NonAdmin)
-    } yield ()
+  def init: fs2.Stream[F, Unit] =
+    fs2.Stream.eval {
+      for {
+        _ <- insertAccount(Admin)
+        _ <- insertAccount(NonAdmin)
+      } yield ()
+    }
 
   private def insertAccount(user: User): F[Unit] =
     for {

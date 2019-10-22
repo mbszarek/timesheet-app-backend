@@ -9,8 +9,7 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.login.{LoginRequest, SignupRequest}
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.HttpRoutes

@@ -4,8 +4,7 @@ import cats._
 import cats.data.OptionT
 import cats.implicits._
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import tsec.authentication.IdentityStore
 
 import scala.collection.concurrent.TrieMap

@@ -6,8 +6,7 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.core.validation.ValidationUtils.{UserAlreadyExists, UserDoesNotExists}
 import com.timesheet.core.validation.user.UserValidatorAlgebra
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 
 class UserService[F[_]: Sync](userStore: UserStoreAlgebra[F], userValidator: UserValidatorAlgebra[F])
     extends UserServiceAlgebra[F] {

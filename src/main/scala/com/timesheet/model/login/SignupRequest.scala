@@ -1,7 +1,6 @@
 package com.timesheet.model.login
 
-import com.timesheet.model.user.{Role, User}
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{Role, User, UserId}
 import tsec.passwordhashers.PasswordHash
 import cats.effect._
 import io.circe.generic.auto._

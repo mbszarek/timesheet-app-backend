@@ -12,8 +12,7 @@ import com.timesheet.core.validation.ValidationUtils
 import com.timesheet.core.validation.ValidationUtils.{WorkSampleValidationError, WrongUserState}
 import com.timesheet.core.validation.worksample.WorkSampleValidatorAlgebra
 import com.timesheet.model.db.ID
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.worksample.{ActivityType, Departure, Entrance, WorkSample}
 
 import scala.annotation.tailrec

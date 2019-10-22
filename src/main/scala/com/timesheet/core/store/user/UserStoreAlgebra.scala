@@ -1,8 +1,7 @@
 package com.timesheet.core.store.user
 
 import cats.data.OptionT
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 
 trait UserStoreAlgebra[F[_]] {
   def create(user: User): F[User]

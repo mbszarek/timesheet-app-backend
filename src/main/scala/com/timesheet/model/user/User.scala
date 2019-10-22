@@ -3,10 +3,8 @@ package com.timesheet.model.user
 import cats._
 import cats.effect._
 import cats.implicits._
-import com.avsystem.commons.serialization.{GenCodec, name, transientDefault, transparent}
-import com.timesheet.model.user.User._
+import com.avsystem.commons.serialization.{HasGenCodec, name, transientDefault}
 import io.circe.generic.auto._
-import org.bson.types.ObjectId
 import org.http4s.EntityDecoder
 import org.http4s.circe._
 import tsec.authorization.AuthorizationInfo
@@ -23,18 +21,7 @@ final case class User(
   @transientDefault isCurrentlyAtWork: Option[Boolean] = None
 )
 
-object User {
-  implicit val Codec: GenCodec[User] = GenCodec.materialize
-
-  @transparent
-  final case class UserId(value: String)
-
-  object UserId {
-    implicit val Codec: GenCodec[UserId] = GenCodec.materialize
-
-    def createNew(): UserId = UserId(ObjectId.get().toHexString)
-  }
-
+object User extends HasGenCodec[User] {
   implicit def authRole[F[_]: Applicative]: AuthorizationInfo[F, Role, User] =
     (u: User) => u.role.pure[F]
 

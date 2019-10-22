@@ -9,8 +9,7 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.WorkTime
 import com.timesheet.model.worksample.WorkSample
 import io.circe.generic.auto._

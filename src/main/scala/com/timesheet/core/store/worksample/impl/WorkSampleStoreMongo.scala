@@ -9,8 +9,7 @@ import cats.data.OptionT
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.worksample.WorkSample
 import org.mongodb.scala.MongoCollection
 import fs2.interop.reactivestreams._
@@ -37,7 +36,7 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
       for {
         coll <- collection
         _ <- coll
-          .findOneAndReplace(equal("_id", workSample.id), workSample)
+          .findOneAndReplace(equal("_id", workSample.id.value), workSample)
           .toFS2
           .drain
       } yield workSample
@@ -48,7 +47,7 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
       for {
         coll <- collection
         workSample <- coll
-          .find(equal("_id", id))
+          .find(equal("_id", id.value))
           .toFS2
           .last
       } yield workSample
@@ -60,7 +59,7 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
       workSamples <- coll
         .find(
           and(
-            equal("userId", userId),
+            equal("userId", userId.value),
             and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC)))
           )
         )
@@ -83,7 +82,7 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
       for {
         coll <- collection
         workSample <- coll
-          .findOneAndDelete(equal("_id", id))
+          .findOneAndDelete(equal("_id", id.value))
           .asReactive
           .toStream[F]
           .compile
@@ -91,11 +90,11 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
       } yield workSample
     }
 
-  def getAllForUser(userId: User.UserId): F[List[WorkSample]] =
+  def getAllForUser(userId: UserId): F[List[WorkSample]] =
     for {
       coll <- collection
       workSamples <- coll
-        .find(equal("userId", userId))
+        .find(equal("userId", userId.value))
         .asReactive
         .toStream[F]
         .compile

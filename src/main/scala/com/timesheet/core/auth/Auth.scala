@@ -3,7 +3,7 @@ package com.timesheet.core.auth
 import cats._
 import cats.effect._
 import com.timesheet.model.user.User._
-import com.timesheet.model.user.{Role, User}
+import com.timesheet.model.user.{Role, User, UserId}
 import org.http4s.Response
 import tsec.authentication.{AugmentedJWT, BackingStore, IdentityStore, JWTAuthenticator, SecuredRequest, TSecAuthService}
 import tsec.authorization.BasicRBAC

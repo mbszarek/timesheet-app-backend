@@ -2,6 +2,7 @@ package com.timesheet
 
 import cats.effect._
 import com.timesheet.core.auth.Auth
+import com.timesheet.core.config.ConfigLoader
 import com.timesheet.core.service.user.impl.UserService
 import com.timesheet.core.service.work.impl.WorkService
 import com.timesheet.core.store.auth.AuthStoreMongo
@@ -36,9 +37,10 @@ class Server[F[_]: ConcurrentEffect] {
       authenticator       = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth           = SecuredRequestHandler(authenticator)
       passwordHasher      = BCrypt.syncPasswordHasher[F]
-      initService         = InitService[F, BCrypt](passwordHasher, userService)
+      configLoader        = ConfigLoader[F]
+      _ <- InitService[F, BCrypt](passwordHasher, userService).init
 
-      _ <- Stream.eval(initService.init)
+      hostConfig <- configLoader.loadHostConfig()
 
       httpApp = Router(
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),

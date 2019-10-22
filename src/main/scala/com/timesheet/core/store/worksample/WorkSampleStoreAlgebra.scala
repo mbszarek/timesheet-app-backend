@@ -1,9 +1,10 @@
 package com.timesheet.core.store.worksample
 
 import java.time.LocalDateTime
+
 import cats.data._
 import com.timesheet.model.db.ID
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.UserId
 import com.timesheet.model.worksample.WorkSample
 
 trait WorkSampleStoreAlgebra[F[_]] {

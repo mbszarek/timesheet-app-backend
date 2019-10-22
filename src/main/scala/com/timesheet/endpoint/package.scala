@@ -1,7 +1,6 @@
 package com.timesheet
 
-import com.timesheet.model.user.User
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.{User, UserId}
 import org.http4s.Response
 import tsec.authentication.{AugmentedJWT, SecuredRequest, TSecAuthService}
 

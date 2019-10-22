@@ -3,8 +3,7 @@ package com.timesheet.core.store.auth
 import cats._
 import cats.data.OptionT
 import cats.implicits._
-import cats.effect._
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.UserId
 import tsec.authentication.{AugmentedJWT, BackingStore}
 import tsec.common.SecureRandomId
 

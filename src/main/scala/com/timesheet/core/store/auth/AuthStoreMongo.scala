@@ -5,7 +5,7 @@ import cats.effect._
 import cats.implicits._
 import cats.data._
 import com.timesheet.core.db.MongoDriverMixin
-import com.timesheet.model.user.User.UserId
+import com.timesheet.model.user.UserId
 import org.mongodb.scala.MongoCollection
 import tsec.authentication.{AugmentedJWT, BackingStore}
 import tsec.common.SecureRandomId
