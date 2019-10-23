@@ -53,6 +53,11 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
       } yield result
 
+    case GET -> Root / "getSamplesForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
+      for {
+        workSamples <- workService.getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
+        result      <- Ok(workSamples.asJson)
+      } yield result
   }
 
   def endpoints(

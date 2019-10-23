@@ -14,6 +14,7 @@ import com.timesheet.core.validation.worksample.WorkSampleValidatorAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.worksample.{ActivityType, Departure, Entrance, WorkSample}
+import com.timesheet.model.worksample.ActivityType.EqInstance
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -47,6 +48,10 @@ class WorkService[F[_]: Sync](
     } yield result
   }
 
+  def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]] = {
+    workSampleStore.getAllForUserBetweenDates(userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+  }
+
   private def createWorkSample(userId: UserId, activityType: ActivityType): WorkSample = WorkSample(
     ID.createNew(),
     userId,
@@ -67,7 +72,7 @@ class WorkService[F[_]: Sync](
   private def countTime(list: List[WorkSample], totalTime: FiniteDuration = 0.second): FiniteDuration = list match {
     case Nil =>
       totalTime
-    case first :: second :: tail if first.activityType == Entrance && second.activityType == Departure =>
+    case first :: second :: tail if first.activityType === Entrance && second.activityType === Departure =>
       countTime(tail, totalTime + (second.date.toEpochMilli - first.date.toEpochMilli).milli)
     case sample :: tail =>
       val date = sample.date.atZone(ZoneId.systemDefault()).toLocalDate

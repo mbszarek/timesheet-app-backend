@@ -30,11 +30,11 @@ class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with Iden
   def delete(userId: UserId): OptionT[F, User] = OptionT.fromOption(cache.remove(userId))
 
   def findByUsername(username: String): OptionT[F, User] =
-    OptionT.fromOption(cache.values.find(_.username == username))
+    OptionT.fromOption(cache.values.find(_.username === username))
 
   def deleteByUsername(username: String): OptionT[F, User] = OptionT.fromOption {
     for {
-      user   <- cache.values.find(_.username == username)
+      user   <- cache.values.find(_.username === username)
       result <- cache.remove(user.id)
     } yield result
   }

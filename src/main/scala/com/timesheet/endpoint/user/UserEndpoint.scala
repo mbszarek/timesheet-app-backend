@@ -2,7 +2,7 @@ package com.timesheet.endpoint.user
 
 import cats.data._
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.error.AuthenticationError
 import com.timesheet.core.service.user.UserServiceAlgebra
@@ -40,7 +40,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           token <- EitherT.right[UserDoesNotExists.type](auth.create(user.id))
         } yield (user, token)
 
-        action.value.flatMap {
+        action.value >>= {
           case Right((user, token))    => Ok(user.asJson).map(auth.embed(_, token))
           case Left(UserDoesNotExists) => BadRequest(AuthenticationError("Authentication failed").asJson)
         }
@@ -67,7 +67,7 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     userService: UserServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
     case GET -> Root asAuthed _ =>
-      userService.getAll().flatMap { users =>
+      userService.getAll() >>= { users =>
         Ok(users.asJson)
       }
   }
