@@ -1,4 +1,4 @@
-package com.timesheet.core.config.entities
+package com.timesheet.core.service.init.config.entities
 
 final case class HostConfig(
   port: Int,
