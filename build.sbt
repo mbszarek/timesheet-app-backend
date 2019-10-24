@@ -9,6 +9,7 @@ val MongoScalaDriver       = "2.7.0"
 val FS2Version             = "2.0.0"
 val silencerVersion        = "1.4.4"
 val PureConfigVersion      = "0.12.1"
+val CatsVersion            = "2.0.0"
 
 enablePlugins(
   JavaAppPackaging
@@ -21,6 +22,8 @@ lazy val root = (project in file("."))
     version := "0.0.1",
     scalaVersion := "2.12.9",
     libraryDependencies ++= Seq(
+      "org.typelevel"         %% "cats-core"              % CatsVersion,
+      "org.typelevel"         %% "cats-effect"            % CatsVersion,
       "org.http4s"            %% "http4s-blaze-server"    % Http4sVersion,
       "org.http4s"            %% "http4s-blaze-client"    % Http4sVersion,
       "org.http4s"            %% "http4s-circe"           % Http4sVersion,

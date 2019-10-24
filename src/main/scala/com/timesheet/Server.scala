@@ -2,7 +2,7 @@ package com.timesheet
 
 import cats.effect._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.config.ConfigLoader
+import com.timesheet.core.service.init.config.ConfigLoaderImpl
 import com.timesheet.core.service.user.impl.UserService
 import com.timesheet.core.service.work.impl.WorkService
 import com.timesheet.core.store.auth.AuthStoreMongo
@@ -13,7 +13,7 @@ import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.endpoint.worksample.WorkEndpoint
 import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
-import com.timesheet.init.InitService
+import com.timesheet.core.service.init.InitService
 import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -37,10 +37,10 @@ class Server[F[_]: ConcurrentEffect] {
       authenticator       = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth           = SecuredRequestHandler(authenticator)
       passwordHasher      = BCrypt.syncPasswordHasher[F]
-      configLoader        = ConfigLoader[F]
-      _ <- InitService[F, BCrypt](passwordHasher, userService).init
+      configLoader        = ConfigLoaderImpl[F]
 
-      hostConfig <- configLoader.loadHostConfig()
+      _          <- InitService[F, BCrypt](passwordHasher, userService, configLoader).init
+      hostConfig <- Stream.eval(configLoader.loadHostConfig())
 
       httpApp = Router(
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
