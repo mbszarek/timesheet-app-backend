@@ -1,6 +1,7 @@
 package com.timesheet
 
 import cats.effect._
+import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.init.config.ConfigLoaderImpl
 import com.timesheet.core.service.user.impl.UserService
