@@ -44,7 +44,7 @@ object Auth {
     TSecAuthService.withAuthorizationHandler(allRolesHelper[F, AugmentedJWT[Auth, UserId]])(pf, onNotAuthorized.run)
 
   private def adminOnlyHelper[F[_], Auth](implicit F: MonadError[F, Throwable]): BasicRBAC[F, Role, User, Auth] =
-    BasicRBAC[F, Role, User, Auth](Role.Admin)
+    BasicRBAC[F, Role, User, Auth](Role.Admin, Role.Employee)
 
   def adminOnly[F[_], Auth](
     pf: PartialFunction[SecuredRequest[F, User, AugmentedJWT[Auth, UserId]], F[Response[F]]]

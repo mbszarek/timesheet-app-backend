@@ -9,8 +9,8 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
+import com.timesheet.model.rest.work.GetWorkingTimeResult
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.rest.work.{GetWorkingTimeResult, WorkTime}
 import com.timesheet.model.worksample.WorkSample
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -82,8 +82,8 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     for {
       workingTime           <- workService.collectWorkTimeForUserBetweenDates(user.id, fromDate, toDate)
       obligatoryWorkingTime <- workService.collectObligatoryWorkTimeForUser(user, fromDate, toDate)
-      workingHours           = WorkTime.fromFiniteDuration(workingTime)
-      obligatoryWorkingHours = WorkTime.fromFiniteDuration(obligatoryWorkingTime)
+      workingHours           = workingTime.toSeconds
+      obligatoryWorkingHours = obligatoryWorkingTime.toSeconds
       result <- Ok(GetWorkingTimeResult(workingHours, obligatoryWorkingHours).asJson)
     } yield result
 

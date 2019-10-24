@@ -13,5 +13,4 @@ final case class WorkSample(
   activityType: ActivityType,
   date: Instant,
 )
-
 object WorkSample extends HasGenCodecWithDeps[InstantTypeClassInstances.type, WorkSample]
