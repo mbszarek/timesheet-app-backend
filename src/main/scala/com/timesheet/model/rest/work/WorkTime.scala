@@ -1,4 +1,4 @@
-package com.timesheet.model.work
+package com.timesheet.model.rest.work
 
 import scala.concurrent.duration.FiniteDuration
 

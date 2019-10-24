@@ -10,7 +10,7 @@ import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.work.WorkTime
+import com.timesheet.model.rest.work.{GetWorkingTimeResult, WorkTime}
 import com.timesheet.model.worksample.WorkSample
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -43,15 +43,11 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     case GET -> Root / "getForToday" asAuthed user =>
       for {
         date   <- Sync[F].delay(LocalDate.now())
-        time   <- workService.collectWorkTimeForUserBetweenDates(user.id, date, date.plusDays(1))
-        result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
+        result <- collectWorkingTime(workService, user, date, date.plusDays(1))
       } yield result
 
     case GET -> Root / "getForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
-      for {
-        time   <- workService.collectWorkTimeForUserBetweenDates(user.id, fromDate, toDate)
-        result <- Ok(WorkTime.fromFiniteDuration(time).asJson)
-      } yield result
+      collectWorkingTime(workService, user, fromDate, toDate)
 
     case GET -> Root / "getSamplesForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
       for {
@@ -76,6 +72,21 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     value.swap
       .map(error => BadRequest(error.asJson))
       .getOrElse(Created())
+
+  private def collectWorkingTime(
+    workService: WorkServiceAlgebra[F],
+    user: User,
+    fromDate: LocalDate,
+    toDate: LocalDate
+  ): F[Response[F]] =
+    for {
+      workingTime           <- workService.collectWorkTimeForUserBetweenDates(user.id, fromDate, toDate)
+      obligatoryWorkingTime <- workService.collectObligatoryWorkTimeForUser(user, fromDate, toDate)
+      workingHours           = WorkTime.fromFiniteDuration(workingTime)
+      obligatoryWorkingHours = WorkTime.fromFiniteDuration(obligatoryWorkingTime)
+      result <- Ok(GetWorkingTimeResult(workingHours, obligatoryWorkingHours).asJson)
+    } yield result
+
 }
 
 object WorkEndpoint {

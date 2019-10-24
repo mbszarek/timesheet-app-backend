@@ -1,6 +1,6 @@
 package com.timesheet.core.service.work.impl
 
-import java.time.{Instant, LocalDate, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{DayOfWeek, Instant, LocalDate, ZoneId, ZoneOffset, ZonedDateTime}
 
 import cats.data._
 import cats.effect._
@@ -15,7 +15,7 @@ import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.worksample.{ActivityType, Departure, Entrance, WorkSample}
 import com.timesheet.model.worksample.ActivityType.EqInstance
-
+import com.timesheet.util.LocalDateTypeClassInstances.localDateOrderInstance
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
@@ -48,9 +48,28 @@ class WorkService[F[_]: Sync](
     } yield result
   }
 
-  def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]] = {
-    workSampleStore.getAllForUserBetweenDates(userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+  def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[FiniteDuration] = {
+    @tailrec
+    def countTime(date: LocalDate, totalTime: FiniteDuration = 0.hour): FiniteDuration =
+      if (date === to)
+        totalTime
+      else {
+        val workingHours = date.getDayOfWeek match {
+          case DayOfWeek.SATURDAY =>
+            0.hour
+          case DayOfWeek.SUNDAY =>
+            0.hour
+          case _ =>
+            (user.workingHours / 5).hour
+        }
+        countTime(date.plusDays(1L), totalTime + workingHours)
+      }
+
+    Sync[F].delay(countTime(from))
   }
+
+  def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]] =
+    workSampleStore.getAllForUserBetweenDates(userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
 
   private def createWorkSample(userId: UserId, activityType: ActivityType): WorkSample = WorkSample(
     ID.createNew(),

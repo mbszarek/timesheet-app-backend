@@ -18,6 +18,7 @@ final case class User(
   hash: String,
   phone: String,
   role: Role,
+  workingHours: Double,
   @transientDefault isCurrentlyAtWork: Option[Boolean] = None
 )
 

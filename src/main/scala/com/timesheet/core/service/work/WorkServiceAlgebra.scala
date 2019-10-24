@@ -16,5 +16,7 @@ trait WorkServiceAlgebra[F[_]] {
 
   def collectWorkTimeForUserBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[FiniteDuration]
 
+  def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[FiniteDuration]
+
   def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]]
 }

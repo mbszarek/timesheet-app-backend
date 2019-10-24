@@ -15,6 +15,7 @@ final case class SignupRequest(
   password: String,
   phone: String,
   role: Role,
+  workingHours: Double,
 ) {
   def asUser[A](hashedPassword: PasswordHash[A]): User = User(
     UserId.createNew(),
@@ -25,6 +26,7 @@ final case class SignupRequest(
     hashedPassword.toString,
     phone,
     role = role,
+    workingHours,
     isCurrentlyAtWork = None,
   )
 }
