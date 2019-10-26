@@ -19,7 +19,7 @@ final case class User(
   phone: String,
   role: Role,
   workingHours: Double,
-  @transientDefault isCurrentlyAtWork: Option[Boolean] = None,
+  isCurrentlyAtWork: Boolean = false,
 )
 
 object User extends HasGenCodec[User] {

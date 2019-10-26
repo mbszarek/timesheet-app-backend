@@ -1,4 +1,4 @@
-package com.timesheet.model.login
+package com.timesheet.model.rest.users
 
 import com.timesheet.model.user.{Role, User, UserId}
 import tsec.passwordhashers.PasswordHash
@@ -27,7 +27,6 @@ final case class SignupRequest(
     phone,
     role = role,
     workingHours,
-    isCurrentlyAtWork = None,
   )
 }
 

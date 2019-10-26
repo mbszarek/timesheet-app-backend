@@ -13,18 +13,16 @@ final class WorkSampleValidator[F[_]: Applicative] extends WorkSampleValidatorAl
     lazy val properEither: EitherT[F, WorkSampleValidationError, Unit] =
       EitherT.rightT[F, WorkSampleValidationError](())
 
-    user.isCurrentlyAtWork.fold(properEither) { cond =>
-      activityType match {
-        case Entrance =>
-          if (cond) wrongEither
-          else
-            properEither
+    activityType match {
+      case Entrance =>
+        if (user.isCurrentlyAtWork) wrongEither
+        else
+          properEither
 
-        case Departure =>
-          if (cond) properEither
-          else
-            wrongEither
-      }
+      case Departure =>
+        if (user.isCurrentlyAtWork) properEither
+        else
+          wrongEither
     }
   }
 }

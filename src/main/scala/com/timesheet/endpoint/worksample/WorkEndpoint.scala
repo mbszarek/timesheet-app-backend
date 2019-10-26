@@ -80,7 +80,7 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     toDate: LocalDate
   ): F[Response[F]] =
     for {
-      workingTime           <- workService.collectWorkTimeForUserBetweenDates(user.id, fromDate, toDate)
+      workingTime           <- workService.collectWorkTimeForUserBetweenDates(user, fromDate, toDate)
       obligatoryWorkingTime <- workService.collectObligatoryWorkTimeForUser(user, fromDate, toDate)
       workingHours           = workingTime.toSeconds
       obligatoryWorkingHours = obligatoryWorkingTime.toSeconds

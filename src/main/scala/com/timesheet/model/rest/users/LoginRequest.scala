@@ -1,4 +1,4 @@
-package com.timesheet.model.login
+package com.timesheet.model.rest.users
 
 import org.http4s.EntityDecoder
 import cats.effect._

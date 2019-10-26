@@ -8,7 +8,7 @@ import com.timesheet.core.error.AuthenticationError
 import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.login.{LoginRequest, SignupRequest}
+import com.timesheet.model.rest.users.{LoginRequest, SignupRequest, UpdateUserRequest}
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -77,6 +77,26 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       Ok(user.asJson)
   }
 
+  def otherUsersEndpoint(
+    userService: UserServiceAlgebra[F],
+  ): AuthEndpoint[F, Auth] = {
+    case GET -> Root / "info" / userName asAuthed _ =>
+      userService.getUserByUsername(userName).value >>= {
+        case Right(user) => Ok(user.asJson)
+        case Left(_)     => NotFound()
+      }
+
+    case req @ PUT -> Root / "info" / userName asAuthed _ =>
+      (for {
+        user    <- userService.getUserByUsername(userName)
+        request <- EitherT.liftF(req.request.as[UpdateUserRequest])
+        result  <- userService.update(request.updateUser(user))
+      } yield result).value >>= {
+        case Right(user) => Ok(user.asJson)
+        case Left(_)     => Forbidden()
+      }
+  }
+
   def endpoints(
     userService: UserServiceAlgebra[F],
     cryptService: PasswordHasher[F, A],
@@ -87,7 +107,8 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       getCurrentUserEndpoint()
     }(TSecAuthService.empty)
     val adminRoutes = Auth.adminOnly {
-      signupEndpoint(userService, cryptService)
+      signupEndpoint(userService, cryptService) orElse
+      otherUsersEndpoint(userService)
     }
     loginEndpoint(userService, cryptService, auth.authenticator) <+> auth.liftService(allRolesRoutes <+> adminRoutes)
   }
