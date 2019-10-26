@@ -9,4 +9,7 @@ object ValidationUtils {
 
   sealed trait WorkSampleValidationError extends Product with Serializable
   final case object WrongUserState       extends WorkSampleValidationError
+
+  sealed trait DateValidationError extends Product with Serializable
+  final case object DateInTheFuture extends DateValidationError
 }

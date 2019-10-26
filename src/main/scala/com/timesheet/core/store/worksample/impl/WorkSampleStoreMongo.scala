@@ -10,7 +10,7 @@ import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.worksample.WorkSample
+import com.timesheet.model.work.WorkSample
 import org.mongodb.scala.MongoCollection
 import fs2.interop.reactivestreams._
 import org.mongodb.scala.model.Filters._

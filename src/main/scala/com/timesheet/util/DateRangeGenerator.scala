@@ -13,7 +13,7 @@ final class DateRangeGenerator[F[_]: Sync] {
   private def stream(from: LocalDate, to: LocalDate): Stream[F, LocalDate] =
     Stream
       .iterate(from)(_.plusDays(1L))
-      .takeWhile(_ < to)
+      .takeWhile(_ <= to)
       .covary[F]
 }
 

@@ -104,11 +104,11 @@ class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRolesHandler {
       getAllUsersEndpoint(userService) orElse
-      getCurrentUserEndpoint()
+      getCurrentUserEndpoint() orElse
+      otherUsersEndpoint(userService)
     }(TSecAuthService.empty)
     val adminRoutes = Auth.adminOnly {
-      signupEndpoint(userService, cryptService) orElse
-      otherUsersEndpoint(userService)
+      signupEndpoint(userService, cryptService)
     }
     loginEndpoint(userService, cryptService, auth.authenticator) <+> auth.liftService(allRolesRoutes <+> adminRoutes)
   }

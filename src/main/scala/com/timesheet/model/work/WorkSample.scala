@@ -1,4 +1,4 @@
-package com.timesheet.model.worksample
+package com.timesheet.model.work
 
 import java.time.Instant
 

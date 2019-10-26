@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 import cats.data._
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.UserId
-import com.timesheet.model.worksample.WorkSample
+import com.timesheet.model.work.WorkSample
 
 trait WorkSampleStoreAlgebra[F[_]] {
   def create(workSample: WorkSample): F[WorkSample]

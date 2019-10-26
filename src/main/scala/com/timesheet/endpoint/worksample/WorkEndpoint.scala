@@ -2,7 +2,7 @@ package com.timesheet.endpoint.worksample
 
 import java.time.LocalDate
 
-import cats.effect.Sync
+import cats.effect._
 import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserServiceAlgebra
@@ -11,7 +11,7 @@ import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.rest.work.GetWorkingTimeResult
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.worksample.WorkSample
+import com.timesheet.model.work.WorkSample
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe.CirceEntityEncoder._
@@ -43,7 +43,7 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     case GET -> Root / "getForToday" asAuthed user =>
       for {
         date   <- Sync[F].delay(LocalDate.now())
-        result <- collectWorkingTime(workService, user, date, date.plusDays(1))
+        result <- collectWorkingTime(workService, user, date, date)
       } yield result
 
     case GET -> Root / "getForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
@@ -54,6 +54,12 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         workSamples <- workService.getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
         result      <- Ok(workSamples.asJson)
       } yield result
+
+    case GET -> Root / "getIntervalsForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
+      workService.getAllWorkIntervalsBetweenDates(user, fromDate, toDate).value >>= {
+        case Right(workIntervals) => Ok(workIntervals.asJson)
+        case Left(ex)             => BadRequest(ex.asJson)
+      }
   }
 
   def endpoints(

@@ -15,6 +15,7 @@ import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.endpoint.worksample.WorkEndpoint
 import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
 import com.timesheet.core.service.init.InitService
+import com.timesheet.core.validation.date.impl.DateValidator
 import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -33,8 +34,9 @@ class Server[F[_]: ConcurrentEffect] {
       workSampleStore     = WorkSampleStoreMongo[F]
       userValidator       = UserValidator[F](userStore)
       workSampleValidator = WorkSampleValidator[F]
+      dateValidator       = DateValidator[F]
       userService         = UserService[F](userStore, userValidator)
-      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator)
+      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator, dateValidator)
       authenticator       = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth           = SecuredRequestHandler(authenticator)
       passwordHasher      = BCrypt.syncPasswordHasher[F]

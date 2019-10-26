@@ -3,9 +3,9 @@ package com.timesheet.core.service.work
 import java.time.LocalDate
 
 import cats.data._
-import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
+import com.timesheet.core.validation.ValidationUtils.{DateValidationError, WorkSampleValidationError}
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.worksample.WorkSample
+import com.timesheet.model.work.{WorkInterval, WorkSample}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -19,4 +19,10 @@ trait WorkServiceAlgebra[F[_]] {
   def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[FiniteDuration]
 
   def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]]
+
+  def getAllWorkIntervalsBetweenDates(
+    user: User,
+    from: LocalDate,
+    to: LocalDate
+  ): EitherT[F, DateValidationError, List[WorkInterval]]
 }

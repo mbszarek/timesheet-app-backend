@@ -5,7 +5,7 @@ import cats.data._
 import com.timesheet.core.validation.ValidationUtils.{WorkSampleValidationError, WrongUserState}
 import com.timesheet.core.validation.worksample.WorkSampleValidatorAlgebra
 import com.timesheet.model.user.User
-import com.timesheet.model.worksample._
+import com.timesheet.model.work._
 
 final class WorkSampleValidator[F[_]: Applicative] extends WorkSampleValidatorAlgebra[F] {
   def hasUserCorrectState(user: User, activityType: ActivityType): EitherT[F, WorkSampleValidationError, Unit] = {
