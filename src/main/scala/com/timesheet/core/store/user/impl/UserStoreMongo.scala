@@ -11,7 +11,7 @@ import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 import tsec.authentication.IdentityStore
 
-class UserStoreMongo[F[_]: ConcurrentEffect]
+final class UserStoreMongo[F[_]: ConcurrentEffect]
     extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {

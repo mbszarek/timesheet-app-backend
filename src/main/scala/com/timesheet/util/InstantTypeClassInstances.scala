@@ -3,9 +3,9 @@ package com.timesheet.util
 import java.time.Instant
 
 import cats._
-import com.avsystem.commons.serialization.{GenCodec, Input, Output}
+import com.avsystem.commons.serialization.GenCodec
 
-object InstantTypeClassInstances  {
+object InstantTypeClassInstances {
   implicit val InstantCodec: GenCodec[Instant] = GenCodec.nonNullSimple(
     input => Instant.ofEpochMilli(input.readTimestamp()),
     (output, value) => output.writeTimestamp(value.toEpochMilli)

@@ -8,7 +8,7 @@ import com.timesheet.core.validation.ValidationUtils.{UserAlreadyExists, UserDoe
 import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.model.user.{User, UserId}
 
-class UserService[F[_]: Sync](userStore: UserStoreAlgebra[F], userValidator: UserValidatorAlgebra[F])
+final class UserService[F[_]: Sync](userStore: UserStoreAlgebra[F], userValidator: UserValidatorAlgebra[F])
     extends UserServiceAlgebra[F] {
   def create(user: User): EitherT[F, UserAlreadyExists, User] =
     for {

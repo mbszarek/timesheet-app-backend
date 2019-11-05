@@ -21,7 +21,7 @@ import org.http4s.{HttpRoutes, QueryParamDecoder, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
 
-class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   import WorkEndpoint._
 
   private def logWorkEndpoint(
@@ -88,9 +88,9 @@ class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     for {
       workingTime           <- workService.collectWorkTimeForUserBetweenDates(user, fromDate, toDate)
       obligatoryWorkingTime <- workService.collectObligatoryWorkTimeForUser(user, fromDate, toDate)
-      workingHours           = workingTime.toSeconds
-      obligatoryWorkingHours = obligatoryWorkingTime.toSeconds
-      result <- Ok(GetWorkingTimeResult(workingHours, obligatoryWorkingHours).asJson)
+      workingSeconds           = workingTime.toSeconds
+      obligatoryWorkingSeconds = obligatoryWorkingTime.toSeconds
+      result <- Ok(GetWorkingTimeResult(workingSeconds, obligatoryWorkingSeconds).asJson)
     } yield result
 
 }

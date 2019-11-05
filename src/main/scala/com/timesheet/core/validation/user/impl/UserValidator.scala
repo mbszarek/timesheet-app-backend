@@ -8,7 +8,7 @@ import com.timesheet.core.validation.ValidationUtils.{UserAlreadyExists, UserDoe
 import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.model.user.User
 
-class UserValidator[F[_]: Applicative](userStore: UserStoreAlgebra[F]) extends UserValidatorAlgebra[F] {
+final class UserValidator[F[_]: Applicative](userStore: UserStoreAlgebra[F]) extends UserValidatorAlgebra[F] {
   def doesExist(user: User): EitherT[F, ValidationUtils.UserDoesNotExists.type, Unit] =
     userStore
       .findByUsername(user.username)

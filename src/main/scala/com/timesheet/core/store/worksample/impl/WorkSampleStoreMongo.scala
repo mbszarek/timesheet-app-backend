@@ -17,7 +17,7 @@ import org.mongodb.scala.model.Filters._
 
 import scala.reflect.ClassTag
 
-class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
+final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
   override type T = WorkSample
 
   protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
@@ -67,7 +67,7 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
         .toList
     } yield workSamples
 
-  def getAll(): F[List[WorkSample]] = {
+  def getAll(): F[List[WorkSample]] =
     for {
       coll <- collection
       workSamples <- coll
@@ -75,7 +75,6 @@ class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebr
         .toFS2
         .toList
     } yield workSamples
-  }
 
   def delete(id: ID): OptionT[F, WorkSample] =
     OptionT {

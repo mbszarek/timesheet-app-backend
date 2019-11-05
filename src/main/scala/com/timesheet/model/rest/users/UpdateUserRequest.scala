@@ -14,7 +14,7 @@ final case class UpdateUserRequest(
   role: Option[Role],
   workingHours: Option[Double],
 ) {
-  def updateUser(user: User): User = {
+  def updateUser(user: User): User =
     user.copy(
       firstName = firstName.getOrElse(user.firstName),
       lastName = lastName.getOrElse(user.lastName),
@@ -23,7 +23,6 @@ final case class UpdateUserRequest(
       role = role.getOrElse(user.role),
       workingHours = workingHours.getOrElse(user.workingHours)
     )
-  }
 }
 
 object UpdateUserRequest {

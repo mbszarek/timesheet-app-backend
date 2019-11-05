@@ -13,7 +13,6 @@ import com.timesheet.core.validation.user.impl.UserValidator
 import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.endpoint.worksample.WorkEndpoint
-import com.timesheet.endpoint.{HelloWorldEndpoint, TestEndpoint}
 import com.timesheet.core.service.init.InitService
 import com.timesheet.core.validation.date.impl.DateValidator
 import fs2.Stream
@@ -25,7 +24,7 @@ import tsec.authentication.SecuredRequestHandler
 import tsec.mac.jca.HMACSHA256
 import tsec.passwordhashers.jca.BCrypt
 
-class Server[F[_]: ConcurrentEffect] {
+final class Server[F[_]: ConcurrentEffect] {
   def stream(implicit T: Timer[F], C: ContextShift[F]): Stream[F, Nothing] = {
     for {
       key <- Stream.eval(HMACSHA256.generateKey[F])
@@ -47,8 +46,6 @@ class Server[F[_]: ConcurrentEffect] {
 
       httpApp = Router(
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
-        "/hello" -> HelloWorldEndpoint[F, HMACSHA256](routeAuth),
-        "/test"  -> TestEndpoint[F],
         "/work"  -> WorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService)
       ).orNotFound
 

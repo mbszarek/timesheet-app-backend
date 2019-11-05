@@ -18,13 +18,11 @@ import com.timesheet.model.work.ActivityType.EqInstance
 import com.timesheet.model.work._
 import com.timesheet.util.DateRangeGenerator
 import com.timesheet.util.InstantTypeClassInstances.instantOrderInstance
-import com.timesheet.util.LocalDateTypeClassInstances.localDateOrderInstance
 import com.timesheet.util.LocalDateTimeTypeClassInstances.localDateTimeOrderInstance
 
 import scala.annotation.tailrec
-import scala.concurrent.duration._
 
-class WorkService[F[_]: Sync](
+final class WorkService[F[_]: Sync](
   userStore: UserStoreAlgebra[F],
   workSampleStore: WorkSampleStoreAlgebra[F],
   workSampleValidator: WorkSampleValidatorAlgebra[F],
@@ -44,7 +42,7 @@ class WorkService[F[_]: Sync](
       workSample <- EitherT.liftF(workSampleStore.create(createWorkSample(user.id, Departure)))
     } yield workSample
 
-  def collectWorkTimeForUserBetweenDates(user: User, from: LocalDate, to: LocalDate): F[FiniteDuration] = {
+  def collectWorkTimeForUserBetweenDates(user: User, from: LocalDate, to: LocalDate): F[WorkTime] = {
     val fromDate = from.atStartOfDay()
     val toDate   = to.plusDays(1).atStartOfDay()
 
@@ -58,12 +56,12 @@ class WorkService[F[_]: Sync](
     } yield result
   }
 
-  def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[FiniteDuration] =
+  def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[WorkTime] =
     for {
       dateRangeGenerator <- DateRangeGenerator[F].pure[F]
       dateRange          <- dateRangeGenerator.getDateRange(from, to)
     } yield {
-      dateRange.foldLeft(0.second) {
+      dateRange.foldLeft(WorkTime.empty) {
         case (duration, localDate) =>
           val workingHours = localDate.getDayOfWeek match {
             //          case DayOfWeek.SATURDAY =>
@@ -71,9 +69,9 @@ class WorkService[F[_]: Sync](
             //          case DayOfWeek.SUNDAY =>
             //            0.hour
             case _ =>
-              (user.workingHours / 5).hour
+              WorkTime.fromMillis((user.workingHours * 60 * 60 * 1000 / 5).toLong)
           }
-          duration + workingHours
+          duration |+| workingHours
       }
     }
 
@@ -118,38 +116,43 @@ class WorkService[F[_]: Sync](
   private def countTime(
     list: List[(LocalDate, List[WorkSample])],
     wasAtWork: Boolean = false,
-    totalTime: FiniteDuration = 0.second,
-  ): FiniteDuration = list match {
+    totalTime: WorkTime = WorkTime.empty,
+  ): WorkTime = list match {
     case Nil =>
       totalTime
     case (localDate, workSamples) :: tail =>
       val (dayTime, newWasAtWork) =
         if (workSamples.isEmpty && wasAtWork)
-          ((getNextAtStartOfDayInstant(localDate).toEpochMilli - localDate.toInstant().toEpochMilli).milli, wasAtWork)
+          (
+            WorkTime.fromMillis(
+              getNextAtStartOfDayInstant(localDate).toEpochMilli - localDate.toInstant().toEpochMilli
+            ),
+            wasAtWork,
+          )
         else
           countDayTime(workSamples, totalTime)
-      countTime(tail, newWasAtWork, totalTime + dayTime)
+      countTime(tail, newWasAtWork, totalTime |+| dayTime)
   }
 
   @tailrec
   private def countDayTime(
     list: List[WorkSample],
-    totalTime: FiniteDuration = 0.second,
+    totalTime: WorkTime = WorkTime.empty,
     wasAtWork: Boolean = false,
-  ): (FiniteDuration, Boolean) = list match {
+  ): (WorkTime, Boolean) = list match {
     case Nil =>
       (totalTime, wasAtWork)
     case first :: second :: tail if first.activityType === Departure && second.activityType === Entrance =>
-      countDayTime(tail, totalTime + (first.date.toEpochMilli - second.date.toEpochMilli).milli)
+      countDayTime(tail, totalTime |+| WorkTime.fromMillis(first.date.toEpochMilli - second.date.toEpochMilli))
     case sample :: tail =>
       val date = sample.date.toLocalDate()
       val (newTotalTime, wasAtWork) = sample.activityType match {
         case Departure =>
-          ((sample.date.toEpochMilli - date.toInstant().toEpochMilli).milli, true)
+          (WorkTime.fromMillis(sample.date.toEpochMilli - date.toInstant().toEpochMilli), true)
         case Entrance =>
-          ((getNextAtStartOfDayInstant(date).toEpochMilli - sample.date.toEpochMilli).milli, false)
+          (WorkTime.fromMillis(getNextAtStartOfDayInstant(date).toEpochMilli - sample.date.toEpochMilli), false)
       }
-      countDayTime(tail, totalTime + newTotalTime, wasAtWork)
+      countDayTime(tail, totalTime |+| newTotalTime, wasAtWork)
   }
 
   @tailrec
@@ -174,8 +177,9 @@ class WorkService[F[_]: Sync](
     result: List[WorkInterval] = List.empty,
   ): (List[WorkInterval], Boolean) = list match {
     case Nil =>
+      val fromDate = lastDateTime.toLocalDate.atStartOfDay()
       val workInterval = WorkInterval(
-        lastDateTime.toLocalDate.atStartOfDay(),
+        if (fromDate === lastDateTime) lastDateTime.toLocalDate.minusDays(1L).atStartOfDay() else fromDate,
         lastDateTime,
         wasAtWork,
       )

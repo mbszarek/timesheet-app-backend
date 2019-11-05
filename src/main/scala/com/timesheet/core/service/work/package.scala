@@ -15,8 +15,8 @@ package object work {
 
     def toLocalDateTime(): LocalDateTime =
       instant
-      .atZone(ZoneId.systemDefault())
-      .toLocalDateTime
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime
   }
 
   final class LocalDateOps(private val localDate: LocalDate) extends AnyVal {

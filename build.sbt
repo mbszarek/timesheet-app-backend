@@ -10,6 +10,7 @@ lazy val root = (project in file("."))
     name := "timesheet_app",
     version := "0.0.1",
     scalaVersion := ProjectScalaVersion,
+    scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.typelevel"         %% "cats-core"              % CatsVersion,
       "org.typelevel"         %% "cats-effect"            % CatsVersion,

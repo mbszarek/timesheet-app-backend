@@ -9,7 +9,7 @@ import tsec.common.SecureRandomId
 
 import scala.collection.concurrent.TrieMap
 
-class AuthStoreInMemory[F[_]: Applicative, A] extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]] {
+final class AuthStoreInMemory[F[_]: Applicative, A] extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]] {
   private val cache = new TrieMap[SecureRandomId, AugmentedJWT[A, UserId]]
 
   override def put(jwt: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] = {

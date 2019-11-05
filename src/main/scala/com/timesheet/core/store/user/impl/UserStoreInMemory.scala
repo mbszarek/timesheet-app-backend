@@ -9,7 +9,7 @@ import tsec.authentication.IdentityStore
 
 import scala.collection.concurrent.TrieMap
 
-class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with IdentityStore[F, UserId, User] {
+final class UserStoreInMemory[F[_]: Applicative] extends UserStoreAlgebra[F] with IdentityStore[F, UserId, User] {
   private val cache = new TrieMap[UserId, User]
 
   def create(user: User): F[User] = {

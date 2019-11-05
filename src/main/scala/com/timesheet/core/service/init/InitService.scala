@@ -7,7 +7,7 @@ import com.timesheet.core.service.init.config.ConfigLoader
 import com.timesheet.core.service.user.impl.UserService
 import tsec.passwordhashers.PasswordHasher
 
-class InitService[F[_]: ConcurrentEffect, A](
+final class InitService[F[_]: ConcurrentEffect, A](
   passwordHasher: PasswordHasher[F, A],
   userService: UserService[F],
   configLoader: ConfigLoader[F],

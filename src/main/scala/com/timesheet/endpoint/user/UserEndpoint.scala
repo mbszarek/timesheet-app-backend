@@ -20,7 +20,7 @@ import tsec.common.Verified
 import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.passwordhashers.{PasswordHash, PasswordHasher}
 
-class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+final class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   private def loginEndpoint(
     userService: UserServiceAlgebra[F],
     cryptService: PasswordHasher[F, A],
