@@ -50,9 +50,10 @@ final class WorkService[F[_]: Sync](
       workSamples <- workSampleStore.getAllForUserBetweenDates(user.id, fromDate, toDate)
       dateRangeGenerator = DateRangeGenerator[F]
       dateRange <- dateRangeGenerator.getDateRange(from, to)
+      wasAtWork <- wasUserAtWork(user.id, toDate)
       groupedWorkSamples = workSamples.groupBy(_.date.toLocalDate())
       newWorkSamples     = dateRange.map(date => date -> groupedWorkSamples.getOrElse(date, List.empty).reverse).reverse
-      result <- Sync[F].delay(countTime(newWorkSamples, user.isCurrentlyAtWork))
+      result <- Sync[F].delay(countTime(newWorkSamples, wasAtWork))
     } yield result
   }
 
@@ -89,13 +90,17 @@ final class WorkService[F[_]: Sync](
         for {
           workSamples <- getAllWorkSamplesBetweenDates(user.id, from, to.plusDays(1L))
           dateRangeGenerator = DateRangeGenerator[F]
+          wasAtWork <- wasUserAtWork(user.id, to.plusDays(1L).atStartOfDay())
           dateRange <- dateRangeGenerator.getDateRange(from, to)
           groupedWorkSamples = workSamples.groupBy(_.date.toLocalDate())
           newWorkSamples     = dateRange.map(date => date -> groupedWorkSamples.getOrElse(date, List.empty).reverse).reverse
-          result             = collectAllWorkIntervals(newWorkSamples, user.isCurrentlyAtWork)
+          result             = collectAllWorkIntervals(newWorkSamples, wasAtWork)
         } yield result
       }
     } yield result
+
+  def wasUserAtWork(userId: UserId, date: LocalDateTime): F[Boolean] =
+    workSampleStore.wasAtWork(userId, date)
 
   private def createWorkSample(userId: UserId, activityType: ActivityType): WorkSample = WorkSample(
     ID.createNew(),
@@ -130,7 +135,7 @@ final class WorkService[F[_]: Sync](
             wasAtWork,
           )
         else
-          countDayTime(workSamples, totalTime)
+          countDayTime(workSamples, totalTime, wasAtWork)
       countTime(tail, newWasAtWork, totalTime |+| dayTime)
   }
 

@@ -1,6 +1,6 @@
 package com.timesheet.core.service.work
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 
 import cats.data._
 import com.timesheet.core.validation.ValidationUtils.{DateValidationError, WorkSampleValidationError}
@@ -23,4 +23,6 @@ trait WorkServiceAlgebra[F[_]] {
     from: LocalDate,
     to: LocalDate
   ): EitherT[F, DateValidationError, List[WorkInterval]]
+
+  def wasUserAtWork(userId: UserId, date: LocalDateTime): F[Boolean]
 }

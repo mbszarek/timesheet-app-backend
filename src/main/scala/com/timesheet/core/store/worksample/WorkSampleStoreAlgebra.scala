@@ -18,6 +18,8 @@ trait WorkSampleStoreAlgebra[F[_]] {
 
   def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[List[WorkSample]]
 
+  def wasAtWork(userId: UserId, date: LocalDateTime): F[Boolean]
+
   def getAllForUser(userId: UserId): F[List[WorkSample]]
 
   def delete(id: ID): OptionT[F, WorkSample]

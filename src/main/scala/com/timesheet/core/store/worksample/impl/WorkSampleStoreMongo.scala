@@ -10,7 +10,7 @@ import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.model.work.WorkSample
+import com.timesheet.model.work.{Departure, Entrance, WorkSample}
 import org.mongodb.scala.MongoCollection
 import fs2.interop.reactivestreams._
 import org.mongodb.scala.model.Filters._
@@ -27,7 +27,7 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
       coll <- collection
       _ <- coll
         .insertOne(workSample)
-        .toFS2
+        .compileFS2
         .drain
     } yield workSample
 
@@ -37,7 +37,7 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
         coll <- collection
         _ <- coll
           .findOneAndReplace(equal("_id", workSample.id.value), workSample)
-          .toFS2
+          .compileFS2
           .drain
       } yield workSample
     }
@@ -48,7 +48,7 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
         coll <- collection
         workSample <- coll
           .find(equal("_id", id.value))
-          .toFS2
+          .compileFS2
           .last
       } yield workSample
     }
@@ -63,16 +63,40 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
             and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC)))
           )
         )
-        .toFS2
+        .compileFS2
         .toList
     } yield workSamples
+
+  def wasAtWork(userId: UserId, date: LocalDateTime): F[Boolean] =
+    for {
+      coll <- collection
+      workSample <- coll
+        .find(
+          and(
+            equal("userId", userId.value),
+            and(lt("date", date.toInstant(ZoneOffset.UTC)))
+          )
+        )
+        .sort(equal("date", -1))
+        .toFS2
+        .head
+        .compile
+        .last
+    } yield {
+      workSample.fold(false) {
+        _.activityType match {
+          case Entrance  => true
+          case Departure => false
+        }
+      }
+    }
 
   def getAll(): F[List[WorkSample]] =
     for {
       coll <- collection
       workSamples <- coll
         .find()
-        .toFS2
+        .compileFS2
         .toList
     } yield workSamples
 

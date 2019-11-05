@@ -14,10 +14,12 @@ package object timesheet extends MongoObservableExtensions {
 
   @silent("deprecated")
   final class MongoObservableOps[F[_]: ConcurrentEffect, T](obs: com.mongodb.async.client.Observable[T]) {
-    def toFS2: Stream.CompileOps[F, F, T] =
+    def toFS2: Stream[F, T] =
       obs.asReactive
         .toStream[F]
-        .compile
+
+    def compileFS2: Stream.CompileOps[F, F, T] =
+      obs.toFS2.compile
   }
 
 }
