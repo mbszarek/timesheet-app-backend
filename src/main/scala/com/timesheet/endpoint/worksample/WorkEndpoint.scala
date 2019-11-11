@@ -61,6 +61,67 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         case Left(ex)             => BadRequest(ex.asJson)
       }
   }
+  private def otherUserLogWorkEndpoint(
+    userService: UserServiceAlgebra[F],
+    workService: WorkServiceAlgebra[F],
+  ): AuthEndpoint[F, Auth] = {
+    def withOtherUser(username: String)(fun: User => F[Response[F]]): F[Response[F]] =
+      userService.getUserByUsername(username).value >>= {
+        case Right(user) => fun(user)
+        case Left(_)     => NotFound()
+      }
+    {
+      case POST -> Root / "other" / username / "start" asAuthed _ =>
+        withOtherUser(username) { user =>
+          for {
+            workSampleEither <- workService.tagWorkerEntrance(user).value
+            result           <- handleEitherToJson(workSampleEither)
+          } yield result
+        }
+
+      case POST -> Root / "other" / username / "end" asAuthed user =>
+        withOtherUser(username) { user =>
+          for {
+            workSampleEither <- workService.tagWorkerExit(user).value
+            result           <- handleEitherToJson(workSampleEither)
+          } yield result
+        }
+
+      case GET -> Root / "other" / username / "getForToday" asAuthed _ =>
+        withOtherUser(username) { user =>
+          for {
+            date   <- Sync[F].delay(LocalDate.now())
+            result <- collectWorkingTime(workService, user, date, date)
+          } yield result
+        }
+
+      case GET -> Root / "other" / username / "getForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
+            toDate
+          ) asAuthed _ =>
+        withOtherUser(username) { user =>
+          collectWorkingTime(workService, user, fromDate, toDate)
+        }
+      case GET -> Root / "other" / username / "getSamplesForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
+            toDate
+          ) asAuthed _ =>
+        withOtherUser(username) { user =>
+          for {
+            workSamples <- workService.getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
+            result      <- Ok(workSamples.asJson)
+          } yield result
+        }
+
+      case GET -> Root / "other" / username / "getIntervalsForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
+            toDate
+          ) asAuthed _ =>
+        withOtherUser(username) { user =>
+          workService.getAllWorkIntervalsBetweenDates(user, fromDate, toDate).value >>= {
+            case Right(workIntervals) => Ok(workIntervals.asJson)
+            case Left(ex)             => BadRequest(ex.asJson)
+          }
+        }
+    }
+  }
 
   def endpoints(
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
@@ -68,9 +129,9 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRoles {
-      logWorkEndpoint(userService, workService)
+      logWorkEndpoint(userService, workService) orElse
+      otherUserLogWorkEndpoint(userService, workService) // I don't know how to add it to "Admin routes only"
     }
-
     auth.liftService(allRolesRoutes)
   }
 
@@ -92,7 +153,6 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       obligatoryWorkingSeconds = obligatoryWorkingTime.toSeconds
       result <- Ok(GetWorkingTimeResult(workingSeconds, obligatoryWorkingSeconds).asJson)
     } yield result
-
 }
 
 object WorkEndpoint {
