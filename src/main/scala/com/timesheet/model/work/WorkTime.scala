@@ -61,6 +61,6 @@ object WorkTime {
         allSeconds % 60,
         allMillis  % 1000,
       )
-    }
+    },
   )
 }

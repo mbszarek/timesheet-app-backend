@@ -8,7 +8,7 @@ import com.avsystem.commons.serialization.GenCodec
 object InstantTypeClassInstances {
   implicit val InstantCodec: GenCodec[Instant] = GenCodec.nonNullSimple(
     input => Instant.ofEpochMilli(input.readTimestamp()),
-    (output, value) => output.writeTimestamp(value.toEpochMilli)
+    (output, value) => output.writeTimestamp(value.toEpochMilli),
   )
 
   implicit val instantOrderInstance: Order[Instant] = Order.from[Instant](_ compareTo _)

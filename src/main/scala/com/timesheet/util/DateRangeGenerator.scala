@@ -7,10 +7,16 @@ import java.time.LocalDate
 import fs2.Stream
 
 final class DateRangeGenerator[F[_]: Sync] {
-  def getDateRange(from: LocalDate, to: LocalDate): F[List[LocalDate]] =
+  def getDateRange(
+    from: LocalDate,
+    to: LocalDate,
+  ): F[List[LocalDate]] =
     stream(from, to).compile.toList
 
-  private def stream(from: LocalDate, to: LocalDate): Stream[F, LocalDate] =
+  private def stream(
+    from: LocalDate,
+    to: LocalDate,
+  ): Stream[F, LocalDate] =
     Stream
       .iterate(from)(_.plusDays(1L))
       .takeWhile(_ <= to)

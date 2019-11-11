@@ -25,7 +25,11 @@ import tsec.mac.jca.HMACSHA256
 import tsec.passwordhashers.jca.BCrypt
 
 final class Server[F[_]: ConcurrentEffect] {
-  def stream(implicit T: Timer[F], C: ContextShift[F]): Stream[F, Nothing] = {
+  def stream(
+    implicit
+    T: Timer[F],
+    C: ContextShift[F],
+  ): Stream[F, Nothing] = {
     for {
       key <- Stream.eval(HMACSHA256.generateKey[F])
       authStore           = AuthStoreMongo[F, HMACSHA256](key)
@@ -46,7 +50,7 @@ final class Server[F[_]: ConcurrentEffect] {
 
       httpApp = Router(
         "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
-        "/work"  -> WorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService)
+        "/work"  -> WorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService),
       ).orNotFound
 
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)

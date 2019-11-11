@@ -4,9 +4,7 @@ import com.timesheet.core.service.init.config.entities.InitConfig.InitUser
 import com.timesheet.model.user.{Role, User, UserId}
 import tsec.passwordhashers.PasswordHash
 
-final case class InitConfig(
-  users: List[InitUser],
-)
+final case class InitConfig(users: List[InitUser])
 
 object InitConfig {
   final private[init] case class InitUser(

@@ -1,6 +1,6 @@
 package com.timesheet.core.service.work
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 
 import cats.data._
 import com.timesheet.core.validation.ValidationUtils.{DateValidationError, WorkSampleValidationError}
@@ -12,15 +12,32 @@ trait WorkServiceAlgebra[F[_]] {
 
   def tagWorkerExit(user: User): EitherT[F, WorkSampleValidationError, WorkSample]
 
-  def collectWorkTimeForUserBetweenDates(user: User, from: LocalDate, to: LocalDate): F[WorkTime]
+  def collectWorkTimeForUserBetweenDates(
+    user: User,
+    from: LocalDate,
+    to: LocalDate,
+  ): F[WorkTime]
 
-  def collectObligatoryWorkTimeForUser(user: User, from: LocalDate, to: LocalDate): F[WorkTime]
+  def collectObligatoryWorkTimeForUser(
+    user: User,
+    from: LocalDate,
+    to: LocalDate,
+  ): F[WorkTime]
 
-  def getAllWorkSamplesBetweenDates(userId: UserId, from: LocalDate, to: LocalDate): F[List[WorkSample]]
+  def getAllWorkSamplesBetweenDates(
+    userId: UserId,
+    from: LocalDate,
+    to: LocalDate,
+  ): F[List[WorkSample]]
 
   def getAllWorkIntervalsBetweenDates(
     user: User,
     from: LocalDate,
-    to: LocalDate
+    to: LocalDate,
   ): EitherT[F, DateValidationError, List[WorkInterval]]
+
+  def wasUserAtWork(
+    user: User,
+    date: LocalDateTime,
+  ): F[Boolean]
 }

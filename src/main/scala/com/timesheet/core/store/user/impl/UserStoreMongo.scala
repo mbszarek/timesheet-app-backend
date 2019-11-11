@@ -22,21 +22,21 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
   override def create(user: User): F[User] =
     for {
       coll <- collection
-      _    <- coll.insertOne(user).toFS2.drain
+      _    <- coll.insertOne(user).compileFS2.drain
     } yield user
 
   override def update(user: User): OptionT[F, User] =
     OptionT.liftF {
       for {
         coll <- collection
-        _    <- coll.findOneAndReplace(equal("_id", user.id.value), user).toFS2.drain
+        _    <- coll.findOneAndReplace(equal("_id", user.id.value), user).compileFS2.drain
       } yield user
     }
 
   override def delete(userId: UserId): OptionT[F, User] = OptionT {
     for {
       coll <- collection
-      user <- coll.findOneAndDelete(equal("_id", userId.value)).toFS2.last
+      user <- coll.findOneAndDelete(equal("_id", userId.value)).compileFS2.last
     } yield user
   }
 
@@ -44,7 +44,7 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     OptionT {
       for {
         coll <- collection
-        user <- coll.find(equal("username", username)).toFS2.last
+        user <- coll.find(equal("username", username)).compileFS2.last
       } yield user
     }
 
@@ -52,21 +52,21 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     for {
       user <- findByUsername(username)
       coll <- OptionT.liftF(collection)
-      _    <- OptionT.liftF(coll.deleteOne(equal("_id", user.id.value)).toFS2.drain)
+      _    <- OptionT.liftF(coll.deleteOne(equal("_id", user.id.value)).compileFS2.drain)
     } yield user
 
   override def get(id: UserId): OptionT[F, User] =
     OptionT {
       for {
         coll <- collection
-        user <- coll.find(equal("_id", id.value)).toFS2.last
+        user <- coll.find(equal("_id", id.value)).compileFS2.last
       } yield user
     }
 
   override def getAll(): F[List[User]] =
     for {
       coll     <- collection
-      userList <- coll.find().toFS2.toList
+      userList <- coll.find().compileFS2.toList
     } yield userList
 }
 

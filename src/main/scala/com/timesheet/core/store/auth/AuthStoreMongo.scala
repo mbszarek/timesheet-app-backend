@@ -14,8 +14,10 @@ import tsec.jws.mac.{JWSMacCV, JWSMacHeader}
 import tsec.mac.jca.{MacErrorM, MacSigningKey}
 import org.mongodb.scala.model.Filters._
 
-final class AuthStoreMongo[F[_]: ConcurrentEffect, A](key: MacSigningKey[A])(
-  implicit hs: JWSSerializer[JWSMacHeader[A]],
+final class AuthStoreMongo[F[_]: ConcurrentEffect, A](
+  key: MacSigningKey[A],
+)(implicit
+  hs: JWSSerializer[JWSMacHeader[A]],
   s: JWSMacCV[MacErrorM, A],
 ) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]]
     with MongoDriverMixin[F] {
@@ -27,34 +29,37 @@ final class AuthStoreMongo[F[_]: ConcurrentEffect, A](key: MacSigningKey[A])(
     for {
       coll <- collection
       entity = GenCodecJWT.fromJWT(elem)
-      _ <- coll.insertOne(entity).toFS2.drain
+      _ <- coll.insertOne(entity).compileFS2.drain
     } yield elem
 
   override def update(v: AugmentedJWT[A, UserId]): F[AugmentedJWT[A, UserId]] =
     for {
       coll <- collection
       entity = GenCodecJWT.fromJWT(v)
-      _ <- coll.replaceOne(equal("id", entity.id), entity).toFS2.drain
+      _ <- coll.replaceOne(equal("id", entity.id), entity).compileFS2.drain
     } yield v
 
   override def delete(id: SecureRandomId): F[Unit] =
     for {
       coll <- collection
-      _    <- coll.deleteOne(equal("id", id)).toFS2.drain
+      _    <- coll.deleteOne(equal("id", id)).compileFS2.drain
     } yield ()
 
   override def get(id: SecureRandomId): OptionT[F, AugmentedJWT[A, UserId]] =
     OptionT {
       for {
         coll   <- collection
-        entity <- coll.find(equal("id", id)).toFS2.last
+        entity <- coll.find(equal("id", id)).compileFS2.last
       } yield entity.map(_.toJWT(id, key))
     }
 }
 
 object AuthStoreMongo {
   def apply[F[_]: ConcurrentEffect, A](
-    key: MacSigningKey[A]
-  )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[F, A] =
+    key: MacSigningKey[A],
+  )(implicit
+    hs: JWSSerializer[JWSMacHeader[A]],
+    s: JWSMacCV[MacErrorM, A],
+  ): AuthStoreMongo[F, A] =
     new AuthStoreMongo(key)
 }

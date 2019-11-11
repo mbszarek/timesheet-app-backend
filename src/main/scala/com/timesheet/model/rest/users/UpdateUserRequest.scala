@@ -21,7 +21,7 @@ final case class UpdateUserRequest(
       email = email.getOrElse(user.email),
       phone = phone.getOrElse(user.phone),
       role = role.getOrElse(user.role),
-      workingHours = workingHours.getOrElse(user.workingHours)
+      workingHours = workingHours.getOrElse(user.workingHours),
     )
 }
 
