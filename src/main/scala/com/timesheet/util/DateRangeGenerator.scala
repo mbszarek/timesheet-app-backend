@@ -13,6 +13,11 @@ final class DateRangeGenerator[F[_]: Sync] {
   ): F[List[LocalDate]] =
     stream(from, to).compile.toList
 
+  def getDateStream(
+    from: LocalDate,
+    to: LocalDate,
+  ): Stream[F, LocalDate] = stream(from, to)
+
   private def stream(
     from: LocalDate,
     to: LocalDate,

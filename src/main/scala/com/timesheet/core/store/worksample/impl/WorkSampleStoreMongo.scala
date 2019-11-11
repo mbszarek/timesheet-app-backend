@@ -3,20 +3,17 @@ package core.store.worksample.impl
 
 import java.time.{LocalDateTime, ZoneOffset}
 
-import cats._
-import cats.implicits._
-import cats.effect._
 import cats.data.OptionT
+import cats.effect._
+import cats.implicits._
 import com.timesheet.core.db.MongoDriverMixin
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.{Departure, Entrance, WorkSample}
-import org.mongodb.scala.MongoCollection
 import fs2.interop.reactivestreams._
+import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
-
-import scala.reflect.ClassTag
 
 final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
   override type T = WorkSample
@@ -139,9 +136,7 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
         coll <- collection
         workSample <- coll
           .findOneAndDelete(equal("_id", id.value))
-          .asReactive
-          .toStream[F]
-          .compile
+          .compileFS2
           .last
       } yield workSample
     }

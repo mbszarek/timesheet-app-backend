@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 import cats.effect._
 import cats.implicits._
+import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
@@ -16,18 +17,13 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.dsl.impl.QueryParamDecoderMatcher
-import org.http4s.{HttpRoutes, QueryParamDecoder, Response}
+import org.http4s.{HttpRoutes, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
 
 final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
-  import WorkEndpoint._
 
-  private def logWorkEndpoint(
-    userService: UserServiceAlgebra[F],
-    workService: WorkServiceAlgebra[F],
-  ): AuthEndpoint[F, Auth] = {
+  private def logWorkEndpoint(workService: WorkServiceAlgebra[F]): AuthEndpoint[F, Auth] = {
     case POST -> Root / "start" asAuthed user =>
       for {
         workSampleEither <- workService.tagWorkerEntrance(user).value
@@ -124,7 +120,7 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRoles {
-      logWorkEndpoint(userService, workService) orElse
+      logWorkEndpoint(workService) orElse
       otherUserLogWorkEndpoint(userService, workService) // I don't know how to add it to "Admin routes only"
     }
     auth.liftService(allRolesRoutes)
@@ -169,11 +165,4 @@ object WorkEndpoint {
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = new WorkEndpoint[F, Auth].endpoints(auth, userService, workService)
-
-  implicit val dateQueryParamDecoder: QueryParamDecoder[LocalDate] =
-    QueryParamDecoder[String].map(LocalDate.parse)
-
-  object FromLocalDateMatcher extends QueryParamDecoderMatcher[LocalDate]("from")
-
-  object ToLocalDateMatcher extends QueryParamDecoderMatcher[LocalDate]("to")
 }

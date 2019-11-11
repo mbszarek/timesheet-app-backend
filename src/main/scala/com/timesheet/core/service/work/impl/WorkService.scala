@@ -1,11 +1,12 @@
-package com.timesheet.core.service.work
-package impl
+package com.timesheet
+package core.service.work.impl
 
 import java.time.{DayOfWeek, Instant, LocalDate, LocalDateTime, ZonedDateTime}
 
 import cats.data._
 import cats.effect._
 import cats.implicits._
+import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.core.validation.ValidationUtils
@@ -19,6 +20,7 @@ import com.timesheet.model.work._
 import com.timesheet.util.DateRangeGenerator
 import com.timesheet.util.InstantTypeClassInstances.instantOrderInstance
 import com.timesheet.util.LocalDateTimeTypeClassInstances.localDateTimeOrderInstance
+
 import scala.annotation.tailrec
 
 final class WorkService[F[_]: Sync](

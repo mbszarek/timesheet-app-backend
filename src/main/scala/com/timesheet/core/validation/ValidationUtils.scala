@@ -1,5 +1,7 @@
 package com.timesheet.core.validation
 
+import java.time.LocalDate
+
 import com.timesheet.model.user.User
 
 object ValidationUtils {
@@ -12,4 +14,11 @@ object ValidationUtils {
 
   sealed trait DateValidationError  extends Product with Serializable
   final case object DateInTheFuture extends DateValidationError
+
+  sealed trait HolidayValidationError extends Product with Serializable
+  final case class HolidayNotFound(
+    user: User,
+    date: LocalDate)
+      extends HolidayValidationError
+  final case class NotEnoughDaysForHolidays(date: LocalDate) extends HolidayValidationError
 }
