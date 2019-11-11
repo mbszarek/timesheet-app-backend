@@ -75,7 +75,8 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   }
 
   private def handleEitherToJson(value: Either[WorkSampleValidationError, WorkSample]): F[Response[F]] =
-    value.swap
+    value
+      .swap
       .map(error => BadRequest(error.asJson))
       .getOrElse(Created())
 
@@ -83,7 +84,7 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     workService: WorkServiceAlgebra[F],
     user: User,
     fromDate: LocalDate,
-    toDate: LocalDate
+    toDate: LocalDate,
   ): F[Response[F]] =
     for {
       workingTime           <- workService.collectWorkTimeForUserBetweenDates(user, fromDate, toDate)
@@ -92,7 +93,6 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       obligatoryWorkingSeconds = obligatoryWorkingTime.toSeconds
       result <- Ok(GetWorkingTimeResult(workingSeconds, obligatoryWorkingSeconds).asJson)
     } yield result
-
 }
 
 object WorkEndpoint {

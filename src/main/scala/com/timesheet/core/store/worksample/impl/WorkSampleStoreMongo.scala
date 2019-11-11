@@ -3,6 +3,7 @@ package core.store.worksample.impl
 
 import java.time.{LocalDateTime, ZoneOffset}
 
+import cats._
 import cats.implicits._
 import cats.effect._
 import cats.data.OptionT
@@ -53,42 +54,74 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
       } yield workSample
     }
 
-  def getAllForUserBetweenDates(userId: UserId, from: LocalDateTime, to: LocalDateTime): F[List[WorkSample]] =
+  def getAllForUserBetweenDates(
+    userId: UserId,
+    from: LocalDateTime,
+    to: LocalDateTime,
+  ): F[List[WorkSample]] =
     for {
       coll <- collection
       workSamples <- coll
         .find(
           and(
             equal("userId", userId.value),
-            and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC)))
-          )
+            and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC))),
+          ),
         )
         .compileFS2
         .toList
     } yield workSamples
 
-  def wasAtWork(userId: UserId, date: LocalDateTime): F[Boolean] =
+  def wasAtWork(
+    user: User,
+    date: LocalDateTime,
+  ): F[Boolean] =
     for {
       coll <- collection
-      workSample <- coll
+
+      workSampleEarlier <- coll
         .find(
           and(
-            equal("userId", userId.value),
-            and(lt("date", date.toInstant(ZoneOffset.UTC)))
-          )
+            equal("userId", user.id.value),
+            lt("date", date.toInstant(ZoneOffset.UTC)),
+          ),
         )
         .sort(equal("date", -1))
         .toFS2
         .head
         .compile
         .last
+
+      workSampleLater <- coll
+        .find(
+          and(
+            equal("userId", user.id.value),
+            gt("date", date.toInstant(ZoneOffset.UTC)),
+          ),
+        )
+        .sort(equal("date", 1))
+        .toFS2
+        .head
+        .compile
+        .last
+
     } yield {
-      workSample.fold(false) {
-        _.activityType match {
-          case Entrance  => true
-          case Departure => false
+      workSampleEarlier
+        .map {
+          _.activityType match {
+            case Entrance  => true
+            case Departure => false
+          }
         }
-      }
+        .orElse {
+          workSampleLater.map {
+            _.activityType match {
+              case Entrance  => false
+              case Departure => true
+            }
+          }
+        }
+        .getOrElse(user.isCurrentlyAtWork)
     }
 
   def getAll(): F[List[WorkSample]] =

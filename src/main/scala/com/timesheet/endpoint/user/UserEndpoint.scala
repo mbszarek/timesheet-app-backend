@@ -63,9 +63,7 @@ final class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield result
   }
 
-  def getAllUsersEndpoint(
-    userService: UserServiceAlgebra[F],
-  ): AuthEndpoint[F, Auth] = {
+  def getAllUsersEndpoint(userService: UserServiceAlgebra[F]): AuthEndpoint[F, Auth] = {
     case GET -> Root asAuthed _ =>
       userService.getAll() >>= { users =>
         Ok(users.asJson)
@@ -77,9 +75,7 @@ final class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       Ok(user.asJson)
   }
 
-  def otherUsersEndpoint(
-    userService: UserServiceAlgebra[F],
-  ): AuthEndpoint[F, Auth] = {
+  def otherUsersEndpoint(userService: UserServiceAlgebra[F]): AuthEndpoint[F, Auth] = {
     case GET -> Root / "info" / userName asAuthed _ =>
       userService.getUserByUsername(userName).value >>= {
         case Right(user) => Ok(user.asJson)

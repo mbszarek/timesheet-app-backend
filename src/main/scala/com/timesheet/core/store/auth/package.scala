@@ -19,8 +19,11 @@ package object auth {
     expiry: Instant,
     @transientDefault lastTouched: Option[Instant] = None,
   ) {
-    def toJWT[A](id: SecureRandomId, key: MacSigningKey[A])(
-      implicit s: JWSMacCV[MacErrorM, A]
+    def toJWT[A](
+      id: SecureRandomId,
+      key: MacSigningKey[A],
+    )(implicit
+      s: JWSMacCV[MacErrorM, A],
     ): AugmentedJWT[A, UserId] =
       JWTMacImpure.verifyAndParse(jwt, key) match {
         case Left(err) => throw new Exception(err)

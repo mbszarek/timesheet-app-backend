@@ -22,15 +22,22 @@ trait MongoDriverMixin[F[_]] {
     } yield conn.getDatabase(dbName)
 
   protected def getCollection(
-    collectionName: String
-  )(implicit F: Sync[F], T: GenCodec[T], C: ClassTag[T]): F[MongoCollection[T]] =
+    collectionName: String,
+  )(implicit
+    F: Sync[F],
+    T: GenCodec[T],
+    C: ClassTag[T],
+  ): F[MongoCollection[T]] =
     for {
       db <- getDatabase("Timesheet")
     } yield createCollection(db, collectionName)
 
   protected val collection: F[MongoCollection[T]]
 
-  private def createCollection[T: GenCodec: ClassTag](db: MongoDatabase, name: String): MongoCollection[T] = {
+  private def createCollection[T: GenCodec: ClassTag](
+    db: MongoDatabase,
+    name: String,
+  ): MongoCollection[T] = {
     val newRegistry = GenCodecRegistry.create[T](db.codecRegistry, GenCodecRegistry.LegacyOptionEncoding)
     db.withCodecRegistry(newRegistry).getCollection(name)
   }

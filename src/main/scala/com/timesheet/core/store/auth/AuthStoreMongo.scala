@@ -14,8 +14,10 @@ import tsec.jws.mac.{JWSMacCV, JWSMacHeader}
 import tsec.mac.jca.{MacErrorM, MacSigningKey}
 import org.mongodb.scala.model.Filters._
 
-final class AuthStoreMongo[F[_]: ConcurrentEffect, A](key: MacSigningKey[A])(
-  implicit hs: JWSSerializer[JWSMacHeader[A]],
+final class AuthStoreMongo[F[_]: ConcurrentEffect, A](
+  key: MacSigningKey[A],
+)(implicit
+  hs: JWSSerializer[JWSMacHeader[A]],
   s: JWSMacCV[MacErrorM, A],
 ) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]]
     with MongoDriverMixin[F] {
@@ -54,7 +56,10 @@ final class AuthStoreMongo[F[_]: ConcurrentEffect, A](key: MacSigningKey[A])(
 
 object AuthStoreMongo {
   def apply[F[_]: ConcurrentEffect, A](
-    key: MacSigningKey[A]
-  )(implicit hs: JWSSerializer[JWSMacHeader[A]], s: JWSMacCV[MacErrorM, A]): AuthStoreMongo[F, A] =
+    key: MacSigningKey[A],
+  )(implicit
+    hs: JWSSerializer[JWSMacHeader[A]],
+    s: JWSMacCV[MacErrorM, A],
+  ): AuthStoreMongo[F, A] =
     new AuthStoreMongo(key)
 }

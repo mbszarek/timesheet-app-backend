@@ -15,7 +15,7 @@ final class DateValidator[F[_]: Applicative] extends DateValidatorAlgebra[F] {
     EitherT.cond[F](
       date <= LocalDate.now(),
       (),
-      DateInTheFuture
+      DateInTheFuture,
     )
 }
 

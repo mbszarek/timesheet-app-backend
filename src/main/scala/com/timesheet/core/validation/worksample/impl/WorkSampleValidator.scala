@@ -8,7 +8,10 @@ import com.timesheet.model.user.User
 import com.timesheet.model.work._
 
 final class WorkSampleValidator[F[_]: Applicative] extends WorkSampleValidatorAlgebra[F] {
-  def hasUserCorrectState(user: User, activityType: ActivityType): EitherT[F, WorkSampleValidationError, Unit] = {
+  def hasUserCorrectState(
+    user: User,
+    activityType: ActivityType,
+  ): EitherT[F, WorkSampleValidationError, Unit] = {
     lazy val wrongEither: EitherT[F, WorkSampleValidationError, Unit] = EitherT.leftT[F, Unit](WrongUserState)
     lazy val properEither: EitherT[F, WorkSampleValidationError, Unit] =
       EitherT.rightT[F, WorkSampleValidationError](())
