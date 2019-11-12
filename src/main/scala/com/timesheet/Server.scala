@@ -45,7 +45,7 @@ final class Server[F[_]: ConcurrentEffect] {
       dateValidator       = DateValidator[F]
       holidayValidator    = HolidayValidator[F]
       userService         = UserService[F](userStore, userValidator)
-      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator, dateValidator)
+      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator, holidayStore, dateValidator)
       holidayService      = HolidayService[F](holidayValidator, holidayStore)
       authenticator       = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth           = SecuredRequestHandler(authenticator)

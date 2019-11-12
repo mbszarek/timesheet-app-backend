@@ -73,7 +73,7 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           } yield result
         }
 
-      case POST -> Root / "other" / username / "end" asAuthed user =>
+      case POST -> Root / "other" / username / "end" asAuthed _ =>
         withOtherUser(username) { user =>
           for {
             workSampleEither <- workService.tagWorkerExit(user).value
@@ -120,10 +120,12 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRoles {
-      logWorkEndpoint(workService) orElse
-      otherUserLogWorkEndpoint(userService, workService) // I don't know how to add it to "Admin routes only"
+      logWorkEndpoint(workService)
     }
-    auth.liftService(allRolesRoutes)
+    val adminRolesRoutes = Auth.adminOnly {
+      otherUserLogWorkEndpoint(userService, workService)
+    }
+    auth.liftService(allRolesRoutes <+> adminRolesRoutes)
   }
 
   private def handleEitherToJson(value: Either[WorkSampleValidationError, WorkSample]): F[Response[F]] =
