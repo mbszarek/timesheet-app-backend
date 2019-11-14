@@ -3,6 +3,7 @@ package com.timesheet.core.db
 import cats.implicits._
 import cats.effect._
 import com.avsystem.commons.mongo.core.GenCodecRegistry
+import com.avsystem.commons.mongo.reactive.GenCodecCollection
 import com.avsystem.commons.serialization.GenCodec
 import org.mongodb.scala.{MongoClient, MongoCollection, MongoDatabase}
 

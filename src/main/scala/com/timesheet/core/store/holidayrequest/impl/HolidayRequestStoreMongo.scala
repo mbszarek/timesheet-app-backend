@@ -16,6 +16,7 @@ import org.mongodb.scala.model.Filters._
 final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
     extends StoreAlgebraImpl[F]
     with HolidayRequestStoreAlgebra[F] {
+  import HolidayRequest._
 
   protected val collection: F[MongoCollection[HolidayRequest]] = getCollection("holidayRequest")
 
@@ -23,7 +24,7 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
     for {
       coll <- collection
       holidayRequests <- coll
-        .find(equal("userId", userId.value))
+        .find(userIdRef equal userId)
         .compileFS2
         .toList
     } yield holidayRequests
@@ -38,9 +39,9 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
       holidayRequests <- coll
         .find(
           and(
-            equal("userId", userId.value),
-            gte("date", fromDate.toInstant().toEpochMilli),
-            lte("date", toDate.toInstant().toEpochMilli),
+            userIdRef equal userId,
+            dateRef gte fromDate,
+            dateRef lte toDate,
           ),
         )
         .compileFS2
@@ -56,8 +57,8 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
       holidayRequests <- coll
         .find(
           and(
-            gte("date", fromDate.toInstant().toEpochMilli),
-            lte("date", toDate.toInstant().toEpochMilli),
+            dateRef gte fromDate,
+            dateRef lte toDate,
           ),
         )
         .compileFS2
@@ -72,7 +73,7 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
       for {
         coll <- collection
         holidayRequest <- coll
-          .findOneAndDelete(and(equal("userId", userId.value), equal("date", date)))
+          .findOneAndDelete(and(userIdRef equal userId, dateRef equal date))
           .compileFS2
           .last
       } yield holidayRequest
@@ -88,9 +89,9 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
       result <- coll
         .countDocuments(
           and(
-            equal("userId", userId.value),
-            gte("date", fromDate.toInstant().toEpochMilli),
-            lte("date", toDate.toInstant().toEpochMilli),
+            userIdRef equal userId,
+            dateRef gte fromDate,
+            dateRef lte toDate,
           ),
         )
         .compileFS2

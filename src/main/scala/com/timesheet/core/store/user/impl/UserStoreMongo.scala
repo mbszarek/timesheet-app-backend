@@ -15,6 +15,8 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {
+  import User._
+
   override type T = User
 
   protected val collection: F[MongoCollection[User]] = getCollection("Users")
@@ -29,14 +31,14 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     OptionT.liftF {
       for {
         coll <- collection
-        _    <- coll.findOneAndReplace(equal("_id", user.id.value), user).compileFS2.drain
+        _    <- coll.findOneAndReplace(idRef equal user.id, user).compileFS2.drain
       } yield user
     }
 
   override def delete(userId: UserId): OptionT[F, User] = OptionT {
     for {
       coll <- collection
-      user <- coll.findOneAndDelete(equal("_id", userId.value)).compileFS2.last
+      user <- coll.findOneAndDelete(idRef equal userId).compileFS2.last
     } yield user
   }
 
@@ -44,7 +46,7 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     OptionT {
       for {
         coll <- collection
-        user <- coll.find(equal("username", username)).compileFS2.last
+        user <- coll.find(usernameRef equal username).compileFS2.last
       } yield user
     }
 
@@ -52,14 +54,14 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
     for {
       user <- findByUsername(username)
       coll <- OptionT.liftF(collection)
-      _    <- OptionT.liftF(coll.deleteOne(equal("_id", user.id.value)).compileFS2.drain)
+      _    <- OptionT.liftF(coll.deleteOne(idRef equal user.id).compileFS2.drain)
     } yield user
 
   override def get(id: UserId): OptionT[F, User] =
     OptionT {
       for {
         coll <- collection
-        user <- coll.find(equal("_id", id.value)).compileFS2.last
+        user <- coll.find(idRef equal id).compileFS2.last
       } yield user
     }
 

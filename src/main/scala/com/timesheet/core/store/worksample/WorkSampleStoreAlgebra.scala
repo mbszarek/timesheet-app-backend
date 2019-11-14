@@ -3,6 +3,7 @@ package com.timesheet.core.store.worksample
 import java.time.LocalDateTime
 
 import cats.data._
+import com.avsystem.commons.mongo.BsonRef
 import com.avsystem.commons.serialization.GenCodec
 import com.timesheet.core.store.base.StoreAlgebra
 import com.timesheet.model.db.ID
@@ -17,6 +18,7 @@ trait WorkSampleStoreAlgebra[F[_]] extends StoreAlgebra[F] {
 
   protected def tag: ClassTag[WorkSample]   = implicitly
   protected def codec: GenCodec[WorkSample] = implicitly
+  protected def idRef: BsonRef[WorkSample, ID] = implicitly
 
   def getAllForUserBetweenDates(
     userId: UserId,

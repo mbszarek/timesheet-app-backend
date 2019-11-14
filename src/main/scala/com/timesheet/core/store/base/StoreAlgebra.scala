@@ -1,6 +1,7 @@
 package com.timesheet.core.store.base
 
 import cats.data._
+import com.avsystem.commons.mongo.BsonRef
 import com.avsystem.commons.serialization.GenCodec
 import com.timesheet.model.db.{DBEntityWithID, ID}
 
@@ -11,6 +12,7 @@ trait StoreAlgebra[F[_]] {
 
   implicit protected def tag: ClassTag[K]
   implicit protected def codec: GenCodec[K]
+  implicit protected def idRef: BsonRef[K, ID]
 
   def create(entity: K): F[K]
 

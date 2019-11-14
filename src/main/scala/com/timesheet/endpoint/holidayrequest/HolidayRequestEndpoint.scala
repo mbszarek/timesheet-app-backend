@@ -56,9 +56,9 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     holidayRequestService: HolidayRequestServiceAlgebra[F],
   ): HttpRoutes[F] = {
-    val allRolesRoutes = Auth.allRoles {
+    val allRolesRoutes = Auth.allRolesHandler {
       getHolidayRequestsEndpointForUser(holidayRequestService)
-    }
+    }(TSecAuthService.empty)
     val adminOnlyRoutes = Auth.adminOnly {
       getHolidayRequestsEndpointForAdmin(holidayRequestService)
     }

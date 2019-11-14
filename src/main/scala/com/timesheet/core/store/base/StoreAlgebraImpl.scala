@@ -5,8 +5,7 @@ import cats.effect._
 import cats.implicits._
 import cats.data._
 import com.timesheet.core.db.MongoDriverMixin
-import com.timesheet.model.db.{ID}
-import org.mongodb.scala.model.Filters._
+import com.timesheet.model.db.ID
 
 abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] with MongoDriverMixin[F] {
 
@@ -26,7 +25,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
       for {
         coll <- collection
         _ <- coll
-          .findOneAndReplace(equal("_id", entity.id.value), entity)
+          .findOneAndReplace(idRef equal entity.id, entity)
           .compileFS2
           .drain
       } yield entity
@@ -37,7 +36,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
       for {
         coll <- collection
         entity <- coll
-          .find(equal("_id", id.value))
+          .find(idRef equal id)
           .compileFS2
           .last
       } yield entity
@@ -57,7 +56,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
       for {
         coll <- collection
         entity <- coll
-          .findOneAndDelete(equal("_id", id.value))
+          .findOneAndDelete(idRef equal id)
           .compileFS2
           .last
       } yield entity

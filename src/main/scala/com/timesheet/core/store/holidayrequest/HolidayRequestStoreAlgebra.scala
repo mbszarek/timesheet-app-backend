@@ -3,8 +3,10 @@ package com.timesheet.core.store.holidayrequest
 import java.time.LocalDate
 
 import cats.data.OptionT
+import com.avsystem.commons.mongo.BsonRef
 import com.avsystem.commons.serialization.GenCodec
 import com.timesheet.core.store.base.StoreAlgebra
+import com.timesheet.model.db.ID
 import com.timesheet.model.holidayrequest.HolidayRequest
 import com.timesheet.model.user.UserId
 
@@ -14,8 +16,9 @@ trait HolidayRequestStoreAlgebra[F[_]] extends StoreAlgebra[F] {
 
   override type K = HolidayRequest
 
-  protected def tag: ClassTag[HolidayRequest]   = implicitly
-  protected def codec: GenCodec[HolidayRequest] = implicitly
+  protected def tag: ClassTag[HolidayRequest]      = implicitly
+  protected def codec: GenCodec[HolidayRequest]    = implicitly
+  protected def idRef: BsonRef[HolidayRequest, ID] = implicitly
 
   def getAllForUser(userId: UserId): F[List[HolidayRequest]]
 

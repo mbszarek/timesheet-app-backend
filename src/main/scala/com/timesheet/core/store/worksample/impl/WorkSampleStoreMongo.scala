@@ -5,6 +5,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 
 import cats.effect._
 import cats.implicits._
+import com.avsystem.commons.serialization.GenCodec
 import com.timesheet.core.store.base.StoreAlgebraImpl
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.user.{User, UserId}
@@ -14,6 +15,7 @@ import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 
 final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F] with WorkSampleStoreAlgebra[F] {
+  import WorkSample._
 
   protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
 
@@ -27,8 +29,11 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImp
       workSamples <- coll
         .find(
           and(
-            equal("userId", userId.value),
-            and(gte("date", from.toInstant(ZoneOffset.UTC)), lte("date", to.toInstant(ZoneOffset.UTC))),
+            userIdRef equal userId,
+            and(
+              dateRef gte from.toInstant(ZoneOffset.UTC),
+              dateRef lte to.toInstant(ZoneOffset.UTC),
+            ),
           ),
         )
         .compileFS2
@@ -45,8 +50,8 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImp
       workSampleEarlier <- coll
         .find(
           and(
-            equal("userId", user.id.value),
-            lt("date", date.toInstant(ZoneOffset.UTC)),
+            userIdRef equal user.id,
+            dateRef lt date.toInstant(ZoneOffset.UTC),
           ),
         )
         .sort(equal("date", -1))
@@ -58,8 +63,8 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImp
       workSampleLater <- coll
         .find(
           and(
-            equal("userId", user.id.value),
-            gt("date", date.toInstant(ZoneOffset.UTC)),
+            userIdRef equal user.id,
+            dateRef gt date.toInstant(ZoneOffset.UTC),
           ),
         )
         .sort(equal("date", 1))
@@ -91,7 +96,7 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImp
     for {
       coll <- collection
       workSamples <- coll
-        .find(equal("userId", userId.value))
+        .find(userIdRef equal userId)
         .asReactive
         .toStream[F]
         .compile

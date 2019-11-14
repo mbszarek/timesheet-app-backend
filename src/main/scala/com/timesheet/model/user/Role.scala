@@ -12,10 +12,10 @@ object Role extends SimpleAuthEnum[Role, String] {
   implicit val Codec: GenCodec[Role] = GenCodec.materialize
 
   val Admin: Role    = Role("Admin")
-  val Worker: Role   = Role("Employer")
-  val Employee: Role = Role("Worker")
+  val Employer: Role = Role("Employer")
+  val Worker: Role   = Role("Worker")
 
-  override val values: AuthGroup[Role] = AuthGroup(Admin, Worker, Employee)
+  override val values: AuthGroup[Role] = AuthGroup(Admin, Employer, Worker)
 
   override def getRepr(t: Role): String = t.roleRepr
 

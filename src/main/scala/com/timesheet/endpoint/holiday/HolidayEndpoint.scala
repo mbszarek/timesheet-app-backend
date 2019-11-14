@@ -34,9 +34,9 @@ final class HolidayEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     auth: SecuredRequestHandler[F, UserId, User, AugmentedJWT[Auth, UserId]],
     holidayService: HolidayServiceAlgebra[F],
   ): HttpRoutes[F] = {
-    val allRolesRoutes = Auth.allRoles {
+    val allRolesRoutes = Auth.allRolesHandler {
       getHolidayEndpoint(holidayService)
-    }
+    }(TSecAuthService.empty)
     auth.liftService(allRolesRoutes)
   }
 

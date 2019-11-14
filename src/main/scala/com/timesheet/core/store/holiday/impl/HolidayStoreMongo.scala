@@ -14,6 +14,7 @@ import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 
 final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F] with HolidayStoreAlgebra[F] {
+  import Holiday._
 
   protected val collection: F[MongoCollection[Holiday]] = getCollection("holidays")
 
@@ -21,7 +22,7 @@ final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F
     for {
       coll <- collection
       holidays <- coll
-        .find(equal("userId", userId.value))
+        .find(userIdRef equal userId)
         .compileFS2
         .toList
     } yield holidays
@@ -36,9 +37,9 @@ final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F
       holidays <- coll
         .find(
           and(
-            equal("userId", userId.value),
-            gte("date", fromDate.toInstant().toEpochMilli),
-            lte("date", toDate.toInstant().toEpochMilli),
+            userIdRef equal userId,
+            dateRef gte fromDate,
+            dateRef lte toDate,
           ),
         )
         .compileFS2
@@ -55,8 +56,8 @@ final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F
         holiday <- coll
           .findOneAndDelete(
             and(
-              equal("userId", userId.value),
-              equal("date", date.toInstant().toEpochMilli),
+              userIdRef equal userId,
+              dateRef equal date,
             ),
           )
           .compileFS2
@@ -74,9 +75,9 @@ final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F
       result <- coll
         .countDocuments(
           and(
-            equal("userId", userId.value),
-            gte("date", fromDate.toInstant().toEpochMilli),
-            lte("date", toDate.toInstant().toEpochMilli),
+            userIdRef equal userId,
+            dateRef gte fromDate,
+            dateRef lte toDate,
           ),
         )
         .compileFS2

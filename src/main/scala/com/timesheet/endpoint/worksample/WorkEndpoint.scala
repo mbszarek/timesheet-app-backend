@@ -95,6 +95,7 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         withOtherUser(username) { user =>
           collectWorkingTime(workService, user, fromDate, toDate)
         }
+
       case GET -> Root / "other" / username / "getSamplesForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
             toDate,
           ) asAuthed _ =>
@@ -119,9 +120,9 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     userService: UserServiceAlgebra[F],
     workService: WorkServiceAlgebra[F],
   ): HttpRoutes[F] = {
-    val allRolesRoutes = Auth.allRoles {
+    val allRolesRoutes = Auth.allRolesHandler {
       logWorkEndpoint(workService)
-    }
+    }(TSecAuthService.empty)
     val adminRolesRoutes = Auth.adminOnly {
       otherUserLogWorkEndpoint(userService, workService)
     }
