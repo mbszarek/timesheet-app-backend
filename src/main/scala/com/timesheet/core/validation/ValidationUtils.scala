@@ -18,7 +18,14 @@ object ValidationUtils {
   sealed trait HolidayValidationError extends Product with Serializable
   final case class HolidayNotFound(
     user: User,
-    date: LocalDate)
-      extends HolidayValidationError
-  final case class NotEnoughDaysForHolidays(date: LocalDate) extends HolidayValidationError
+    date: LocalDate,
+  ) extends HolidayValidationError
+
+  sealed trait HolidayRequestValidationError extends Product with Serializable
+  final case class HolidayRequestNotFound(
+    user: User,
+    date: LocalDate,
+  ) extends HolidayRequestValidationError
+  final case class NotEnoughDaysForHolidays(date: LocalDate) extends HolidayRequestValidationError
+
 }

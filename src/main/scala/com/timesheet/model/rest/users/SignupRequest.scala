@@ -25,8 +25,9 @@ final case class SignupRequest(
     email,
     hashedPassword.toString,
     phone,
-    role = role,
+    role,
     workingHours,
+    ((workingHours / 40) * 26).toInt,
   )
 }
 

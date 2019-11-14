@@ -3,53 +3,19 @@ package core.store.worksample.impl
 
 import java.time.{LocalDateTime, ZoneOffset}
 
-import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
-import com.timesheet.core.db.MongoDriverMixin
+import com.timesheet.core.store.base.StoreAlgebraImpl
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
-import com.timesheet.model.db.ID
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.{Departure, Entrance, WorkSample}
 import fs2.interop.reactivestreams._
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 
-final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStoreAlgebra[F] with MongoDriverMixin[F] {
-  override type T = WorkSample
+final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F] with WorkSampleStoreAlgebra[F] {
 
   protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
-
-  def create(workSample: WorkSample): F[WorkSample] =
-    for {
-      coll <- collection
-      _ <- coll
-        .insertOne(workSample)
-        .compileFS2
-        .drain
-    } yield workSample
-
-  def update(workSample: WorkSample): OptionT[F, WorkSample] =
-    OptionT.liftF {
-      for {
-        coll <- collection
-        _ <- coll
-          .findOneAndReplace(equal("_id", workSample.id.value), workSample)
-          .compileFS2
-          .drain
-      } yield workSample
-    }
-
-  def get(id: ID): OptionT[F, WorkSample] =
-    OptionT {
-      for {
-        coll <- collection
-        workSample <- coll
-          .find(equal("_id", id.value))
-          .compileFS2
-          .last
-      } yield workSample
-    }
 
   def getAllForUserBetweenDates(
     userId: UserId,
@@ -119,26 +85,6 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends WorkSampleStore
           }
         }
         .getOrElse(user.isCurrentlyAtWork)
-    }
-
-  def getAll(): F[List[WorkSample]] =
-    for {
-      coll <- collection
-      workSamples <- coll
-        .find()
-        .compileFS2
-        .toList
-    } yield workSamples
-
-  def delete(id: ID): OptionT[F, WorkSample] =
-    OptionT {
-      for {
-        coll <- collection
-        workSample <- coll
-          .findOneAndDelete(equal("_id", id.value))
-          .compileFS2
-          .last
-      } yield workSample
     }
 
   def getAllForUser(userId: UserId): F[List[WorkSample]] =

@@ -37,9 +37,14 @@ final class HolidayService[F[_]: Sync](
     holidayType: HolidayType,
   ): F[List[Either[ValidationUtils.HolidayValidationError, Holiday]]] =
     (for {
-      date <- DateRangeGenerator[F].getDateStream(fromDate, toDate)
-      k    <- Stream.eval(holidayValidator.checkIfUserCanTakeHoliday(user, date, holidayType).value)
-    } yield k).compile.toList
+      date      <- DateRangeGenerator[F].getDateStream(fromDate, toDate)
+      validated <- Stream.eval(holidayValidator.checkIfUserCanTakeHoliday(user, date, holidayType).value)
+
+      _ <- validated match {
+        case Left(_)      => Stream.empty
+        case Right(value) => Stream.eval(holidayStore.create(value))
+      }
+    } yield validated).compile.toList
 
   override def deleteHoliday(
     user: User,

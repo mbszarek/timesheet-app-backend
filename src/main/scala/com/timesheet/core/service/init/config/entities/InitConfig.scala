@@ -16,6 +16,7 @@ object InitConfig {
     password: String,
     role: Role,
     workingHours: Double,
+    holidaysPerYear: Int,
   ) {
     def toUser[A](passwordHash: PasswordHash[A]): User = User(
       UserId.createNew(),
@@ -27,6 +28,7 @@ object InitConfig {
       phone,
       role,
       workingHours,
+      holidaysPerYear,
     )
   }
 }

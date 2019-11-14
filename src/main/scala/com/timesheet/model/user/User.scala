@@ -19,6 +19,7 @@ final case class User(
   phone: String,
   role: Role,
   workingHours: Double,
+  @transientDefault holidaysPerYear: Int = 26,
   isCurrentlyAtWork: Boolean = false,
 )
 

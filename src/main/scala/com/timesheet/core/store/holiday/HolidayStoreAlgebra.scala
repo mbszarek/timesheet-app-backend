@@ -3,27 +3,35 @@ package com.timesheet.core.store.holiday
 import java.time.LocalDate
 
 import cats.data._
-import com.timesheet.model.db.ID
+import com.avsystem.commons.serialization.GenCodec
+import com.timesheet.core.store.base.StoreAlgebra
 import com.timesheet.model.holiday.Holiday
 import com.timesheet.model.user.UserId
 
-trait HolidayStoreAlgebra[F[_]] {
-  def create(holiday: Holiday): F[Holiday]
+import scala.reflect.ClassTag
 
-  def update(holiday: Holiday): OptionT[F, Holiday]
+trait HolidayStoreAlgebra[F[_]] extends StoreAlgebra[F] {
+  override type K = Holiday
 
-  def get(id: ID): OptionT[F, Holiday]
-
-  def getAll(): F[List[Holiday]]
+  protected def tag: ClassTag[Holiday]   = implicitly
+  protected def codec: GenCodec[Holiday] = implicitly
 
   def getAllForUser(userId: UserId): F[List[Holiday]]
 
-  def getAllForUserBetweenDates(userId: UserId, fromDate: LocalDate, toDate: LocalDate): F[List[Holiday]]
-
-  def delete(id: ID): OptionT[F, Holiday]
+  def getAllForUserBetweenDates(
+    userId: UserId,
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): F[List[Holiday]]
 
   def deleteUserHolidayForDate(
     userId: UserId,
     date: LocalDate,
   ): OptionT[F, Holiday]
+
+  def countForUserForDateRange(
+    userId: UserId,
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): F[Long]
 }

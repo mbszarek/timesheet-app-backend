@@ -13,6 +13,7 @@ final case class UpdateUserRequest(
   phone: Option[String],
   role: Option[Role],
   workingHours: Option[Double],
+  holidaysPerYear: Option[Int],
 ) {
   def updateUser(user: User): User =
     user.copy(
@@ -26,5 +27,5 @@ final case class UpdateUserRequest(
 }
 
 object UpdateUserRequest {
-  implicit def updateUserRequestDecoder[F[_]: Sync]: EntityDecoder[F, UpdateUserRequest] = jsonOf
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, UpdateUserRequest] = jsonOf
 }
