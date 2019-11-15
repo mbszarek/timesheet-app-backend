@@ -20,6 +20,5 @@ trait HolidayValidatorAlgebra[F[_]] {
     date: LocalDate,
     amountOfDays: Int,
     holidayType: HolidayType,
-    description: String,
-  ): EitherT[F, HolidayRequestValidationError, HolidayRequest]
+  ): EitherT[F, HolidayRequestValidationError, Unit]
 }

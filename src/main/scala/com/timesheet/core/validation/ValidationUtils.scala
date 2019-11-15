@@ -26,6 +26,6 @@ object ValidationUtils {
     user: User,
     date: LocalDate,
   ) extends HolidayRequestValidationError
-  final case class NotEnoughDaysForHolidays(date: LocalDate) extends HolidayRequestValidationError
+  final case class NotEnoughDaysForHolidays(daysLeft: Int) extends HolidayRequestValidationError
 
 }
