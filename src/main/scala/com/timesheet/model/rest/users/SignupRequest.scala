@@ -17,6 +17,8 @@ final case class SignupRequest(
   role: Role,
   workingHours: Double,
 ) {
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
+
   def asUser[A](hashedPassword: PasswordHash[A]): User = User(
     UserId.createNew(),
     username,
@@ -32,5 +34,5 @@ final case class SignupRequest(
 }
 
 object SignupRequest {
-  implicit def signupRequestDecoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
 }

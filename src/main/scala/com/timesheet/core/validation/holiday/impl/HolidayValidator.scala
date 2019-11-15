@@ -39,8 +39,7 @@ final class HolidayValidator[F[_]: Monad](
     date: LocalDate,
     amountOfDays: Int,
     holidayType: HolidayType,
-    description: String,
-  ): EitherT[F, HolidayRequestValidationError, HolidayRequest] =
+  ): EitherT[F, HolidayRequestValidationError, Unit] =
     for {
       holidaysCountedDays <- EitherT.liftF {
         for {
@@ -54,15 +53,8 @@ final class HolidayValidator[F[_]: Monad](
       }
       holidayRequest <- EitherT.cond[F](
         holidaysCountedDays + amountOfDays <= user.holidaysPerYear,
-        HolidayRequest(
-          ID.createNew(),
-          user.id,
-          date,
-          holidayType,
-          description,
-          Status.Pending,
-        ),
-        NotEnoughDaysForHolidays(date): HolidayRequestValidationError,
+        (),
+        NotEnoughDaysForHolidays(user.holidaysPerYear - holidaysCountedDays.toInt): HolidayRequestValidationError,
       )
     } yield holidayRequest
 }

@@ -11,5 +11,5 @@ final case class LoginRequest(
 )
 
 object LoginRequest {
-  implicit def loginRequestDecoder[F[_]: Sync]: EntityDecoder[F, LoginRequest] = jsonOf
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, LoginRequest] = jsonOf
 }

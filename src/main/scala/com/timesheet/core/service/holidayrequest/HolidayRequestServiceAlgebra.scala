@@ -24,7 +24,7 @@ trait HolidayRequestServiceAlgebra[F[_]] {
     toDate: LocalDate,
     holidayType: HolidayType,
     description: String,
-  ): F[List[Either[HolidayRequestValidationError, HolidayRequest]]]
+  ): EitherT[F, HolidayRequestValidationError, List[HolidayRequest]]
 
   def deleteHolidayRequest(
     user: User,

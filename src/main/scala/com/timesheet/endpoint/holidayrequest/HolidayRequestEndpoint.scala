@@ -1,15 +1,18 @@
 package com.timesheet.endpoint.holidayrequest
 
+import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
 import com.timesheet.endpoint.AuthEndpoint
+import com.timesheet.model.rest.holidayrequest.HolidayRESTRequest
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.HttpRoutes
+import org.http4s.circe._
 import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
 import tsec.authentication._
@@ -50,6 +53,16 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
           .getAllHolidayRequestsForSpecifiedDateRange(fromDate, toDate)
         response <- Ok(holidayRequests.asJson)
       } yield response
+  }
+
+  private def createHolidayRequestsEndpointForAdmin(
+    holidayRequestService: HolidayRequestServiceAlgebra[F],
+  ): AuthEndpoint[F, Auth] = {
+    case req @ POST -> Root asAuthed user =>
+      for {
+        request <- EitherT.liftF(req.request.as[HolidayRESTRequest])
+      _ <- holidayRequestService.createHolidayRequestForDateRange(user, request.fromDate, request.toDate, request.holidayType, request.description)
+      } yield ()
   }
 
   def endpoints(
