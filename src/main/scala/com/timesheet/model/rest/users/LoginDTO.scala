@@ -5,11 +5,11 @@ import cats.effect._
 import io.circe.generic.auto._
 import org.http4s.circe._
 
-final case class LoginRequest(
+final case class LoginDTO(
   username: String,
   password: String,
 )
 
-object LoginRequest {
-  implicit def decoder[F[_]: Sync]: EntityDecoder[F, LoginRequest] = jsonOf
+object LoginDTO {
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, LoginDTO] = jsonOf
 }

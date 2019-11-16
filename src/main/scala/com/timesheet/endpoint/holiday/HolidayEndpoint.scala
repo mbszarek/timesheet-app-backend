@@ -24,10 +24,12 @@ final class HolidayEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield result
 
     case GET -> Root / "betweenDates" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
-      for {
-        holidays <- holidayService.collectHolidaysForUserBetweenDates(user.id, fromDate, toDate)
-        result   <- Ok(holidays.asJson)
-      } yield result
+      holidayService
+        .collectHolidaysForUserBetweenDates(user.id, fromDate, toDate)
+        .value >>= {
+        case Right(holidays) => Ok(holidays.asJson)
+        case Left(ex)        => BadRequest(ex.asJson)
+      }
   }
 
   def endpoints(

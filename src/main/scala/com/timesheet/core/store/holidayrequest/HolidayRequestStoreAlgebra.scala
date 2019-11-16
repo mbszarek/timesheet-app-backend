@@ -20,6 +20,14 @@ trait HolidayRequestStoreAlgebra[F[_]] extends StoreAlgebra[F] {
   protected def codec: GenCodec[HolidayRequest]    = implicitly
   protected def idRef: BsonRef[HolidayRequest, ID] = implicitly
 
+  def getAllPendingForUser(userId: UserId): F[List[HolidayRequest]]
+
+  def getAllPendingForUserBetweenDates(
+    userId: UserId,
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): F[List[HolidayRequest]]
+
   def getAllForUser(userId: UserId): F[List[HolidayRequest]]
 
   def getAllForUserBetweenDates(
@@ -38,7 +46,7 @@ trait HolidayRequestStoreAlgebra[F[_]] extends StoreAlgebra[F] {
     date: LocalDate,
   ): OptionT[F, HolidayRequest]
 
-  def countForUserForDateRange(
+  def countPendingForUserForDateRange(
     userId: UserId,
     fromDate: LocalDate,
     toDate: LocalDate,

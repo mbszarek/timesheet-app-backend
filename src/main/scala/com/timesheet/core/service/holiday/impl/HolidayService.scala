@@ -8,7 +8,8 @@ import cats.effect._
 import com.timesheet.core.service.holiday.HolidayServiceAlgebra
 import com.timesheet.core.store.holiday.HolidayStoreAlgebra
 import com.timesheet.core.validation.ValidationUtils
-import com.timesheet.core.validation.ValidationUtils.{HolidayNotFound, HolidayValidationError}
+import com.timesheet.core.validation.ValidationUtils.{DateValidationError, HolidayNotFound, HolidayValidationError}
+import com.timesheet.core.validation.date.DateValidatorAlgebra
 import com.timesheet.core.validation.holiday.HolidayValidatorAlgebra
 import com.timesheet.model.holiday.{Holiday, HolidayType}
 import com.timesheet.model.user.{User, UserId}
@@ -16,6 +17,7 @@ import com.timesheet.util.DateRangeGenerator
 import fs2._
 
 final class HolidayService[F[_]: Sync](
+  dateValidator: DateValidatorAlgebra[F],
   holidayValidator: HolidayValidatorAlgebra[F],
   holidayStore: HolidayStoreAlgebra[F],
 ) extends HolidayServiceAlgebra[F] {
@@ -68,13 +70,23 @@ final class HolidayService[F[_]: Sync](
     userId: UserId,
     fromDate: LocalDate,
     toDate: LocalDate,
-  ): F[List[Holiday]] =
-    holidayStore.getAllForUserBetweenDates(userId, fromDate, toDate)
+  ): EitherT[F, DateValidationError, List[Holiday]] =
+    for {
+      _ <- dateValidator
+        .areDatesInProperOrder(fromDate.atStartOfDay(), toDate.atStartOfDay())
+
+      holidays <- EitherT
+        .right[DateValidationError] {
+          holidayStore
+            .getAllForUserBetweenDates(userId, fromDate, toDate)
+        }
+    } yield holidays
 }
 
 object HolidayService {
   def apply[F[_]: Sync](
+    dateValidator: DateValidatorAlgebra[F],
     holidayValidator: HolidayValidatorAlgebra[F],
     holidayStore: HolidayStoreAlgebra[F],
-  ): HolidayService[F] = new HolidayService[F](holidayValidator, holidayStore)
+  ): HolidayService[F] = new HolidayService[F](dateValidator, holidayValidator, holidayStore)
 }

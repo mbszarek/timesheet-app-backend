@@ -16,19 +16,19 @@ trait WorkServiceAlgebra[F[_]] {
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): F[WorkTime]
+  ): EitherT[F, DateValidationError, WorkTime]
 
   def collectObligatoryWorkTimeForUser(
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): F[WorkTime]
+  ): EitherT[F, DateValidationError, WorkTime]
 
   def getAllWorkSamplesBetweenDates(
     userId: UserId,
     from: LocalDate,
     to: LocalDate,
-  ): F[List[WorkSample]]
+  ): EitherT[F, DateValidationError, List[WorkSample]]
 
   def getAllWorkIntervalsBetweenDates(
     user: User,
@@ -39,5 +39,5 @@ trait WorkServiceAlgebra[F[_]] {
   def wasUserAtWork(
     user: User,
     date: LocalDateTime,
-  ): F[Boolean]
+  ): EitherT[F, DateValidationError, Boolean]
 }

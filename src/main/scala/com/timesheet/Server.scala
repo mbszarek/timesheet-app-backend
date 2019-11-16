@@ -1,7 +1,6 @@
 package com.timesheet
 
 import cats.effect._
-import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.holiday.impl.HolidayService
 import com.timesheet.core.service.holidayapproval.impl.HolidayApprovalService
@@ -22,7 +21,7 @@ import com.timesheet.core.store.holidayrequest.impl.HolidayRequestStoreMongo
 import com.timesheet.core.validation.date.impl.DateValidator
 import com.timesheet.core.validation.holiday.impl.HolidayValidator
 import com.timesheet.endpoint.holiday.HolidayEndpoint
-import com.timesheet.endpoint.holidayrequest.HolidayRequestEndpoint
+import com.timesheet.endpoint.holidayrequest.{HolidayRequestApprovalEndpoint, HolidayRequestEndpoint}
 import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -51,8 +50,8 @@ final class Server[F[_]: ConcurrentEffect] {
       holidayValidator       = HolidayValidator[F](holidayStore, holidayRequestStore)
       userService            = UserService[F](userStore, userValidator)
       workService            = WorkService[F](userStore, workSampleStore, workSampleValidator, holidayStore, dateValidator)
-      holidayService         = HolidayService[F](holidayValidator, holidayStore)
-      holidayRequestService  = HolidayRequestService[F](holidayValidator, holidayRequestStore)
+      holidayService         = HolidayService[F](dateValidator, holidayValidator, holidayStore)
+      holidayRequestService  = HolidayRequestService[F](dateValidator, holidayValidator, holidayRequestStore)
       holidayApprovalService = HolidayApprovalService[F](holidayStore, holidayRequestStore)
       authenticator          = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth              = SecuredRequestHandler(authenticator)
@@ -67,6 +66,13 @@ final class Server[F[_]: ConcurrentEffect] {
         "/work"           -> WorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService),
         "/holiday"        -> HolidayEndpoint.endpoint[F, HMACSHA256](routeAuth, holidayService),
         "/holidayRequest" -> HolidayRequestEndpoint.endpoint[F, HMACSHA256](routeAuth, holidayRequestService),
+        "/holidaysApproval" -> HolidayRequestApprovalEndpoint.endpoint[F, HMACSHA256](
+          routeAuth,
+          userService,
+          holidayRequestService,
+          holidayApprovalService,
+          dateValidator,
+        ),
       ).orNotFound
 
       finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)

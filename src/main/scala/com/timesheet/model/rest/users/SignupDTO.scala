@@ -7,7 +7,7 @@ import io.circe.generic.auto._
 import org.http4s.EntityDecoder
 import org.http4s.circe._
 
-final case class SignupRequest(
+final case class SignupDTO(
   username: String,
   firstName: String,
   lastName: String,
@@ -16,8 +16,9 @@ final case class SignupRequest(
   phone: String,
   role: Role,
   workingHours: Double,
+  holidaysPerYear: Int,
 ) {
-  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupDTO] = jsonOf
 
   def asUser[A](hashedPassword: PasswordHash[A]): User = User(
     UserId.createNew(),
@@ -29,10 +30,10 @@ final case class SignupRequest(
     phone,
     role,
     workingHours,
-    ((workingHours / 40) * 26).toInt,
+    holidaysPerYear,
   )
 }
 
-object SignupRequest {
-  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupRequest] = jsonOf
+object SignupDTO {
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, SignupDTO] = jsonOf
 }

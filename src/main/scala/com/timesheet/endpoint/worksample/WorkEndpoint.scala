@@ -10,7 +10,7 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.work.GetWorkingTimeResult
+import com.timesheet.model.rest.work.{GetWorkingTimeResultDTO, WorkSampleDTO}
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.WorkSample
 import io.circe.generic.auto._
@@ -46,10 +46,18 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       collectWorkingTime(workService, user, fromDate, toDate)
 
     case GET -> Root / "getSamplesForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
-      for {
-        workSamples <- workService.getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
-        result      <- Ok(workSamples.asJson)
-      } yield result
+      workService
+        .getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
+        .value >>= {
+        case Right(workSamples) =>
+          Ok {
+            workSamples
+              .map(WorkSampleDTO.fromWorkSample)
+              .asJson
+          }
+        case Left(ex) =>
+          BadRequest(ex.asJson)
+      }
 
     case GET -> Root / "getIntervalsForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
       extractWorkIntervals(workService)(user, fromDate, toDate)
@@ -60,10 +68,13 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     workService: WorkServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
     def withOtherUser(username: String)(fun: User => F[Response[F]]): F[Response[F]] =
-      userService.getUserByUsername(username).value >>= {
+      userService
+        .getUserByUsername(username)
+        .value >>= {
         case Right(user) => fun(user)
         case Left(_)     => NotFound()
       }
+
     {
       case POST -> Root / "other" / username / "start" asAuthed _ =>
         withOtherUser(username) { user =>
@@ -100,10 +111,18 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
             toDate,
           ) asAuthed _ =>
         withOtherUser(username) { user =>
-          for {
-            workSamples <- workService.getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
-            result      <- Ok(workSamples.asJson)
-          } yield result
+          workService
+            .getAllWorkSamplesBetweenDates(user.id, fromDate, toDate)
+            .value >>= {
+            case Right(workSamples) =>
+              Ok {
+                workSamples
+                  .map(WorkSampleDTO.fromWorkSample)
+                  .asJson
+              }
+            case Left(ex) =>
+              BadRequest(ex.asJson)
+          }
         }
 
       case GET -> Root / "other" / username / "getIntervalsForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
@@ -140,14 +159,17 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     user: User,
     fromDate: LocalDate,
     toDate: LocalDate,
-  ): F[Response[F]] =
+  ): F[Response[F]] = {
     for {
       workingTime           <- workService.collectWorkTimeForUserBetweenDates(user, fromDate, toDate)
       obligatoryWorkingTime <- workService.collectObligatoryWorkTimeForUser(user, fromDate, toDate)
       workingSeconds           = workingTime.toSeconds
       obligatoryWorkingSeconds = obligatoryWorkingTime.toSeconds
-      result <- Ok(GetWorkingTimeResult(workingSeconds, obligatoryWorkingSeconds).asJson)
-    } yield result
+    } yield GetWorkingTimeResultDTO(workingSeconds, obligatoryWorkingSeconds)
+  }.value >>= {
+    case Right(dto) => Ok(dto.asJson)
+    case Left(ex)   => BadRequest(ex.asJson)
+  }
 
   private def extractWorkIntervals(
     workService: WorkServiceAlgebra[F],

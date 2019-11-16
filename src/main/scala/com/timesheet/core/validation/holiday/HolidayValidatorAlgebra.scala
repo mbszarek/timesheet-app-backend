@@ -5,7 +5,6 @@ import java.time.LocalDate
 import cats.data._
 import com.timesheet.core.validation.ValidationUtils.{HolidayRequestValidationError, HolidayValidationError}
 import com.timesheet.model.holiday.{Holiday, HolidayType}
-import com.timesheet.model.holidayrequest.HolidayRequest
 import com.timesheet.model.user.User
 
 trait HolidayValidatorAlgebra[F[_]] {

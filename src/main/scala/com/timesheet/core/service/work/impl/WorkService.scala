@@ -31,54 +31,79 @@ final class WorkService[F[_]: Sync](
   workSampleStore: WorkSampleStoreAlgebra[F],
   workSampleValidator: WorkSampleValidatorAlgebra[F],
   holidayStore: HolidayStoreAlgebra[F],
-  dateValidatorAlgebra: DateValidatorAlgebra[F],
+  dateValidator: DateValidatorAlgebra[F],
 ) extends WorkServiceAlgebra[F] {
   def tagWorkerEntrance(user: User): EitherT[F, WorkSampleValidationError, WorkSample] =
     for {
-      _          <- workSampleValidator.hasUserCorrectState(user, Entrance)
-      _          <- changeUserStatus(user)
-      workSample <- EitherT.liftF(workSampleStore.create(createWorkSample(user.id, Entrance)))
+      _ <- workSampleValidator
+        .hasUserCorrectState(user, Entrance)
+
+      _ <- changeUserStatus(user)
+
+      workSample <- EitherT
+        .right[WorkSampleValidationError](workSampleStore.create(createWorkSample(user.id, Entrance)))
     } yield workSample
 
   def tagWorkerExit(user: User): EitherT[F, WorkSampleValidationError, WorkSample] =
     for {
-      _          <- workSampleValidator.hasUserCorrectState(user, Departure)
-      _          <- changeUserStatus(user)
-      workSample <- EitherT.liftF(workSampleStore.create(createWorkSample(user.id, Departure)))
+      _ <- workSampleValidator
+        .hasUserCorrectState(user, Departure)
+
+      _ <- changeUserStatus(user)
+
+      workSample <- EitherT
+        .right[WorkSampleValidationError](workSampleStore.create(createWorkSample(user.id, Departure)))
     } yield workSample
 
   def collectWorkTimeForUserBetweenDates(
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): F[WorkTime] = {
+  ): EitherT[F, DateValidationError, WorkTime] = {
     val fromDate = from.atStartOfDay()
     val toDate   = to.plusDays(1).atStartOfDay()
 
     for {
-      workSamples <- workSampleStore.getAllForUserBetweenDates(user.id, fromDate, toDate)
-      holidays <- holidayStore
-        .getAllForUserBetweenDates(user.id, fromDate.toLocalDate, toDate.toLocalDate)
-        .map(_.map(holiday => holiday.date -> holiday).toMap)
-      dateRangeGenerator = DateRangeGenerator[F]
-      dateRange <- dateRangeGenerator.getDateRange(from, to)
-      wasAtWork <- wasUserAtWork(user, toDate)
-      groupedWorkSamples = workSamples.groupBy(_.date.toLocalDate())
-      newWorkSamples = dateRange.map { date =>
-        date -> (groupedWorkSamples.getOrElse(date, List.empty).reverse, holidays.get(date))
-      }.reverse
-      result <- Sync[F].delay(countTime(newWorkSamples, user, wasAtWork))
-    } yield result
+      _ <- checkDateOrder(dateValidator, from, to)
+
+      workTime <- EitherT
+        .right[DateValidationError] {
+          for {
+            workSamples <- workSampleStore
+              .getAllForUserBetweenDates(user.id, fromDate, toDate)
+
+            holidays <- holidayStore
+              .getAllForUserBetweenDates(user.id, fromDate.toLocalDate, toDate.toLocalDate)
+              .map(_.map(holiday => holiday.date -> holiday).toMap)
+
+            dateRange <- DateRangeGenerator[F]
+              .getDateRange(from, to)
+
+            wasAtWork <- workSampleStore
+              .wasAtWork(user, toDate)
+
+            groupedWorkSamples = workSamples
+              .groupBy(_.date.toLocalDate())
+
+            newWorkSamples = extractWorkSamples(dateRange, groupedWorkSamples, holidays)
+
+            result <- Sync[F]
+              .delay(countTime(newWorkSamples, user, wasAtWork))
+          } yield result
+        }
+    } yield workTime
   }
 
   def collectObligatoryWorkTimeForUser(
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): F[WorkTime] =
+  ): EitherT[F, DateValidationError, WorkTime] =
     for {
-      dateRangeGenerator <- DateRangeGenerator[F].pure[F]
-      dateRange          <- dateRangeGenerator.getDateRange(from, to)
+      _ <- checkDateOrder(dateValidator, from, to)
+
+      dateRange <- EitherT
+        .right[DateValidationError](DateRangeGenerator[F].getDateRange(from, to))
     } yield {
       dateRange.foldLeft(WorkTime.empty) {
         case (duration, localDate) =>
@@ -96,8 +121,16 @@ final class WorkService[F[_]: Sync](
     userId: UserId,
     from: LocalDate,
     to: LocalDate,
-  ): F[List[WorkSample]] =
-    workSampleStore.getAllForUserBetweenDates(userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+  ): EitherT[F, DateValidationError, List[WorkSample]] =
+    for {
+      _ <- checkDateOrder(dateValidator, from, to)
+
+      workSamples <- EitherT
+        .right[DateValidationError] {
+          workSampleStore
+            .getAllForUserBetweenDates(userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        }
+    } yield workSamples
 
   def getAllWorkIntervalsBetweenDates(
     user: User,
@@ -105,21 +138,32 @@ final class WorkService[F[_]: Sync](
     to: LocalDate,
   ): EitherT[F, DateValidationError, List[WorkInterval]] =
     for {
-      _ <- dateValidatorAlgebra.isDateInTheFuture(to)
-      result <- EitherT.liftF {
+      _ <- checkDateOrder(dateValidator, from, to)
+
+      result <- EitherT.right[DateValidationError] {
         for {
           holidays <- holidayStore
             .getAllForUserBetweenDates(user.id, from, to.plusDays(1L))
             .map(_.map(holiday => holiday.date -> holiday).toMap)
-          workSamples <- getAllWorkSamplesBetweenDates(user.id, from, to.plusDays(1L))
-          dateRangeGenerator = DateRangeGenerator[F]
-          wasAtWork <- wasUserAtWork(user, to.plusDays(1L).atStartOfDay())
-          dateRange <- dateRangeGenerator.getDateRange(from, to)
-          groupedWorkSamples = workSamples.groupBy(_.date.toLocalDate())
-          newWorkSamples = dateRange.map { date =>
-            date -> (groupedWorkSamples.getOrElse(date, List.empty).reverse, holidays.get(date))
-          }.reverse
-          result = collectAllWorkIntervals(newWorkSamples, wasAtWork)
+
+          workSamples <- workSampleStore
+            .getAllForUserBetweenDates(user.id, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+
+          wasAtWork <- if (to.atStartOfDay() > LocalDateTime.now())
+            false.pure[F]
+          else
+            workSampleStore.wasAtWork(user, to.plusDays(1L).atStartOfDay())
+
+          dateRange <- DateRangeGenerator[F]
+            .getDateRange(from, to)
+
+          groupedWorkSamples = workSamples
+            .groupBy(_.date.toLocalDate())
+
+          newWorkSamples = extractWorkSamples(dateRange, groupedWorkSamples, holidays)
+
+          result <- Sync[F]
+            .delay(collectAllWorkIntervals(newWorkSamples, wasAtWork))
         } yield result
       }
     } yield result
@@ -127,8 +171,14 @@ final class WorkService[F[_]: Sync](
   def wasUserAtWork(
     user: User,
     date: LocalDateTime,
-  ): F[Boolean] =
-    workSampleStore.wasAtWork(user, date)
+  ): EitherT[F, DateValidationError, Boolean] =
+    for {
+      _ <- dateValidator
+        .isDateInThePast(date)
+
+      result <- EitherT
+        .right[DateValidationError](workSampleStore.wasAtWork(user, date))
+    } yield result
 
   private def createWorkSample(
     userId: UserId,
@@ -207,7 +257,7 @@ final class WorkService[F[_]: Sync](
       collectAllWorkIntervals(tail, wasAtWork = false, result :+ WorkInterval.Holiday(date))
     case (localDate, (workSamples, _)) :: tail =>
       val (workIntervals, newWasAtWork): (List[WorkInterval], Boolean) =
-        collectDayWorkIntervals(workSamples, wasAtWork, localDate.plusDays(1L).atStartOfDay().min(LocalDateTime.now()))
+        collectDayWorkIntervals(workSamples, wasAtWork, localDate.plusDays(1L).atStartOfDay())
       collectAllWorkIntervals(tail, newWasAtWork, result ++ workIntervals)
   }
 
@@ -252,6 +302,21 @@ final class WorkService[F[_]: Sync](
         ZonedDateTime.now().toInstant
       }
 
+  private def extractWorkSamples(
+    dateRange: List[LocalDate],
+    groupedWorkSamples: Map[LocalDate, List[WorkSample]],
+    holidays: Map[LocalDate, Holiday],
+  ): List[(LocalDate, (List[WorkSample], Option[Holiday]))] =
+    dateRange.map { date =>
+      date -> (groupedWorkSamples.getOrElse(date, List.empty).reverse, holidays.get(date))
+    }.reverse
+
+  private def checkDateOrder(
+    dateValidator: DateValidatorAlgebra[F],
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): EitherT[F, DateValidationError, Unit] =
+    dateValidator.areDatesInProperOrder(fromDate.atStartOfDay(), toDate.atStartOfDay())
 }
 
 object WorkService {

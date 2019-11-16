@@ -3,7 +3,7 @@ package com.timesheet.core.service.holiday
 import java.time.LocalDate
 
 import cats.data._
-import com.timesheet.core.validation.ValidationUtils.HolidayValidationError
+import com.timesheet.core.validation.ValidationUtils.{DateValidationError, HolidayValidationError}
 import com.timesheet.model.holiday.{Holiday, HolidayType}
 import com.timesheet.model.user.{User, UserId}
 
@@ -32,5 +32,5 @@ trait HolidayServiceAlgebra[F[_]] {
     userId: UserId,
     fromDate: LocalDate,
     toDate: LocalDate,
-  ): F[List[Holiday]]
+  ): EitherT[F, DateValidationError, List[Holiday]]
 }

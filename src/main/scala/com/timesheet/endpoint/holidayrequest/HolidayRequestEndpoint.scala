@@ -7,13 +7,12 @@ import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.holidayrequest.HolidayRESTRequest
+import com.timesheet.model.rest.holidayrequest.{CreateHolidayRequestDTO, DeleteHolidayRequestDTO}
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.HttpRoutes
 import org.http4s.circe._
-import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
@@ -25,16 +24,17 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
     case GET -> Root asAuthed user =>
       for {
         holidayRequests <- holidayRequestService
-          .collectHolidayRequestsForUser(user.id)
+          .getAllHolidayRequestsForUser(user.id)
         response <- Ok(holidayRequests.asJson)
       } yield response
 
     case GET -> Root / "betweenDates" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
-      for {
-        holidayRequests <- holidayRequestService
-          .collectHolidayRequestsForUserBetweenDates(user.id, fromDate, toDate)
-        response <- Ok(holidayRequests.asJson)
-      } yield response
+      holidayRequestService
+        .getAllHolidayRequestsForUserBetweenDates(user.id, fromDate, toDate)
+        .value >>= {
+        case Right(holidayRequests) => Ok(holidayRequests.asJson)
+        case Left(ex)               => BadRequest(ex.asJson)
+      }
   }
 
   private def getHolidayRequestsEndpointForAdmin(
@@ -48,21 +48,46 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
       } yield response
 
     case GET -> Root / "all" / "betweenDates" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed _ =>
-      for {
-        holidayRequests <- holidayRequestService
-          .getAllHolidayRequestsForSpecifiedDateRange(fromDate, toDate)
-        response <- Ok(holidayRequests.asJson)
-      } yield response
+      holidayRequestService
+        .getAllHolidayRequestsForSpecifiedDateRange(fromDate, toDate)
+        .value >>= {
+        case Right(holidayRequests) => Ok(holidayRequests.asJson)
+        case Left(ex)               => BadRequest(ex.asJson)
+      }
   }
 
-  private def createHolidayRequestsEndpointForAdmin(
+  private def createHolidayRequestsEndpointForUser(
     holidayRequestService: HolidayRequestServiceAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
-    case req @ POST -> Root asAuthed user =>
+    case req @ POST -> Root asAuthed user => {
       for {
-        request <- EitherT.liftF(req.request.as[HolidayRESTRequest])
-      _ <- holidayRequestService.createHolidayRequestForDateRange(user, request.fromDate, request.toDate, request.holidayType, request.description)
+        request <- EitherT.liftF(req.request.as[CreateHolidayRequestDTO])
+        _ <- holidayRequestService.createHolidayRequestForDateRange(
+          user,
+          request.fromDate,
+          request.toDate,
+          request.holidayType,
+          request.description,
+        )
       } yield ()
+    }.value >>= {
+      case Right(_) => Created()
+      case Left(ex) => BadRequest(ex.asJson)
+    }
+
+    case req @ DELETE -> Root asAuthed user => {
+      for {
+        request <- EitherT.liftF(req.request.as[DeleteHolidayRequestDTO])
+        holidayRequests <- holidayRequestService.deleteHolidayRequestsForDateRange(
+          user,
+          request.fromDate,
+          request.toDate,
+        )
+      } yield holidayRequests
+    }.value >>= {
+      case Right(holidayRequests) => Ok(holidayRequests.asJson)
+      case Left(ex)               => BadRequest(ex.asJson)
+    }
   }
 
   def endpoints(
@@ -70,7 +95,8 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
     holidayRequestService: HolidayRequestServiceAlgebra[F],
   ): HttpRoutes[F] = {
     val allRolesRoutes = Auth.allRolesHandler {
-      getHolidayRequestsEndpointForUser(holidayRequestService)
+      getHolidayRequestsEndpointForUser(holidayRequestService) orElse
+      createHolidayRequestsEndpointForUser(holidayRequestService)
     }(TSecAuthService.empty)
     val adminOnlyRoutes = Auth.adminOnly {
       getHolidayRequestsEndpointForAdmin(holidayRequestService)

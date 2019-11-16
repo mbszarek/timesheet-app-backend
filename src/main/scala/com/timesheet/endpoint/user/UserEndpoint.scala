@@ -2,13 +2,13 @@ package com.timesheet.endpoint.user
 
 import cats.data._
 import cats.effect._
-import cats.syntax.all._
+import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.error.AuthenticationError
 import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.users.{LoginRequest, SignupRequest, UpdateUserRequest}
+import com.timesheet.model.rest.users.{LoginDTO, SignupDTO, UpdateUserDTO, UserDTO}
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -27,69 +27,120 @@ final class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     auth: Authenticator[F, UserId, User, AugmentedJWT[Auth, UserId]],
   ): HttpRoutes[F] =
     HttpRoutes.of[F] {
-      case req @ POST -> Root / "login" =>
-        val action = for {
-          login <- EitherT.liftF(req.as[LoginRequest])
-          name = login.username
-          user        <- userService.getUserByUsername(name)
-          checkResult <- EitherT.liftF(cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
-          _ <- checkResult match {
-            case Verified => EitherT.rightT[F, UserDoesNotExists.type](())
-            case _        => EitherT.leftT[F, User](UserDoesNotExists)
-          }
-          token <- EitherT.right[UserDoesNotExists.type](auth.create(user.id))
-        } yield (user, token)
+      case req @ POST -> Root / "login" => {
+        for {
+          login <- EitherT
+            .right[UserValidationError](req.as[LoginDTO])
 
-        action.value >>= {
-          case Right((user, token))    => Ok(user.asJson).map(auth.embed(_, token))
-          case Left(UserDoesNotExists) => BadRequest(AuthenticationError("Authentication failed").asJson)
-        }
+          name = login.username
+
+          user <- userService
+            .getUserByUsername(name)
+
+          checkResult <- EitherT
+            .right[UserValidationError](cryptService.checkpw(login.password, PasswordHash[A](user.hash)))
+
+          _ <- checkResult match {
+            case Verified => EitherT.rightT[F, UserValidationError](())
+            case _        => EitherT.leftT[F, Unit](UserDoesNotExists).leftWiden[UserValidationError]
+          }
+
+          token <- EitherT
+            .right[UserValidationError](auth.create(user.id))
+        } yield (user, token)
+      }.value >>= {
+        case Right((user, token)) =>
+          Ok {
+            UserDTO
+              .fromUser(user)
+              .asJson
+          }.map(auth.embed(_, token))
+        case Left(_) => BadRequest(AuthenticationError("Authentication failed").asJson)
+      }
     }
 
   private def signupEndpoint(
     userService: UserServiceAlgebra[F],
     cryptService: PasswordHasher[F, A],
   ): AuthEndpoint[F, Auth] = {
-    case req @ POST -> Root asAuthed _ =>
+    case req @ POST -> Root asAuthed _ => {
       for {
-        signup        <- req.request.as[SignupRequest]
-        hash          <- cryptService.hashpw(signup.password)
-        user          <- signup.asUser(hash).pure[F]
-        serviceResult <- userService.create(user).value
-        result <- serviceResult match {
-          case Right(saved)                  => Ok(saved.asJson)
-          case Left(UserAlreadyExists(user)) => Conflict(s"Cannot create user with username: ${user.username}")
-        }
+        signup <- EitherT
+          .right[UserValidationError](req.request.as[SignupDTO])
+
+        hash <- EitherT
+          .right[UserValidationError](cryptService.hashpw(signup.password))
+
+        user <- EitherT
+          .rightT[F, UserValidationError](signup.asUser(hash))
+
+        result <- userService
+          .create(user)
       } yield result
+    }.value >>= {
+      case Right(user) =>
+        Ok {
+          UserDTO
+            .fromUser(user)
+            .asJson
+        }
+
+      case Left(_) =>
+        Conflict("Cannot create user")
+    }
   }
 
   def getAllUsersEndpoint(userService: UserServiceAlgebra[F]): AuthEndpoint[F, Auth] = {
     case GET -> Root asAuthed _ =>
-      userService.getAll() >>= { users =>
-        Ok(users.asJson)
-      }
+      Nested(userService.getAll())
+        .map(UserDTO.fromUser)
+        .value >>= (users => Ok(users.asJson))
   }
 
   def getCurrentUserEndpoint(): AuthEndpoint[F, Auth] = {
     case GET -> Root / "me" asAuthed user =>
-      Ok(user.asJson)
+      Ok {
+        UserDTO
+          .fromUser(user)
+          .asJson
+      }
   }
 
   def otherUsersEndpoint(userService: UserServiceAlgebra[F]): AuthEndpoint[F, Auth] = {
     case GET -> Root / "info" / userName asAuthed _ =>
-      userService.getUserByUsername(userName).value >>= {
-        case Right(user) => Ok(user.asJson)
-        case Left(_)     => NotFound()
+      userService
+        .getUserByUsername(userName)
+        .value >>= {
+        case Right(user) =>
+          Ok {
+            UserDTO
+              .fromUser(user)
+              .asJson
+          }
+
+        case Left(_) =>
+          NotFound()
       }
 
     case req @ PUT -> Root / "info" / userName asAuthed _ =>
       (for {
-        user    <- userService.getUserByUsername(userName)
-        request <- EitherT.liftF(req.request.as[UpdateUserRequest])
-        result  <- userService.update(request.updateUser(user))
+        user <- userService
+          .getUserByUsername(userName)
+
+        request <- EitherT
+          .right[UserValidationError](req.request.as[UpdateUserDTO])
+
+        result <- userService
+          .update(request.updateUser(user))
       } yield result).value >>= {
-        case Right(user) => Ok(user.asJson)
-        case Left(_)     => Forbidden()
+        case Right(user) =>
+          Ok {
+            UserDTO
+              .fromUser(user)
+              .asJson
+          }
+
+        case Left(_) => Forbidden()
       }
   }
 

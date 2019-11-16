@@ -1,6 +1,6 @@
 package com.timesheet.model.rest.work
 
-final case class GetWorkingTimeResult(
+final case class GetWorkingTimeResultDTO(
   workingTimeSeconds: Long,
   obligatoryWorkTimeSeconds: Long,
 )

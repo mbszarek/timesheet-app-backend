@@ -39,4 +39,5 @@ object HolidayRequest
   implicit val idRef: BsonRef[HolidayRequest, ID] = bson.ref(_.id)
   val userIdRef: BsonRef[HolidayRequest, UserId]  = bson.ref(_.userId)
   val dateRef: BsonRef[HolidayRequest, LocalDate] = bson.ref(_.date)
+  val statusRef: BsonRef[HolidayRequest, Status]  = bson.ref(_.status)
 }

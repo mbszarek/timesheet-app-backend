@@ -6,7 +6,7 @@ import org.http4s.EntityDecoder
 import org.http4s.circe._
 import io.circe.generic.auto._
 
-final case class UpdateUserRequest(
+final case class UpdateUserDTO(
   firstName: Option[String],
   lastName: Option[String],
   email: Option[String],
@@ -26,6 +26,6 @@ final case class UpdateUserRequest(
     )
 }
 
-object UpdateUserRequest {
-  implicit def decoder[F[_]: Sync]: EntityDecoder[F, UpdateUserRequest] = jsonOf
+object UpdateUserDTO {
+  implicit def decoder[F[_]: Sync]: EntityDecoder[F, UpdateUserDTO] = jsonOf
 }
