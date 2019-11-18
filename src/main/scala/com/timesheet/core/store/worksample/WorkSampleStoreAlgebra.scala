@@ -16,8 +16,8 @@ trait WorkSampleStoreAlgebra[F[_]] extends StoreAlgebra[F] {
 
   override type K = WorkSample
 
-  protected def tag: ClassTag[WorkSample]   = implicitly
-  protected def codec: GenCodec[WorkSample] = implicitly
+  protected def tag: ClassTag[WorkSample]      = implicitly
+  protected def codec: GenCodec[WorkSample]    = implicitly
   protected def idRef: BsonRef[WorkSample, ID] = implicitly
 
   def getAllForUserBetweenDates(
