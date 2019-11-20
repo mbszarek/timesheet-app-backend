@@ -122,6 +122,21 @@ final class UserEndpoint[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           NotFound()
       }
 
+    case GET -> Root / "id" / userId asAuthed _ =>
+      userService
+        .getUserByUserId(UserId(userId))
+        .value >>= {
+        case Right(user) =>
+          Ok {
+            UserDTO
+              .fromUser(user)
+              .asJson
+          }
+
+        case Left(_) =>
+          NotFound()
+      }
+
     case req @ PUT -> Root / "info" / userName asAuthed _ =>
       (for {
         user <- userService
