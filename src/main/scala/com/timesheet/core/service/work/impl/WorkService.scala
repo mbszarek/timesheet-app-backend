@@ -6,6 +6,8 @@ import java.time.{DayOfWeek, Instant, LocalDate, LocalDateTime, ZonedDateTime}
 import cats.data._
 import cats.effect._
 import cats.implicits._
+import com.timesheet.core.service.base.EntityServiceAlgebra.EntityStore
+import com.timesheet.core.service.base.impl.EntityServiceImpl
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.store.holiday.HolidayStoreAlgebra
 import com.timesheet.core.store.user.UserStoreAlgebra
@@ -32,7 +34,11 @@ final class WorkService[F[_]: Sync](
   workSampleValidator: WorkSampleValidatorAlgebra[F],
   holidayStore: HolidayStoreAlgebra[F],
   dateValidator: DateValidatorAlgebra[F],
-) extends WorkServiceAlgebra[F] {
+) extends EntityServiceImpl[F]
+    with WorkServiceAlgebra[F] {
+
+  override protected def entityStore: EntityStore[F, WorkSample] = workSampleStore
+
   def tagWorkerEntrance(user: User): EitherT[F, WorkSampleValidationError, WorkSample] =
     for {
       _ <- workSampleValidator
@@ -72,9 +78,10 @@ final class WorkService[F[_]: Sync](
             workSamples <- workSampleStore
               .getAllForUserBetweenDates(user.id, fromDate, toDate)
 
-            holidays <- holidayStore
-              .getAllForUserBetweenDates(user.id, fromDate.toLocalDate, toDate.toLocalDate)
-              .map(_.map(holiday => holiday.date -> holiday).toMap)
+            holidays <- getHolidayMap {
+              holidayStore
+                .getAllForUserBetweenDates(user.id, fromDate.toLocalDate, toDate.toLocalDate)
+            }
 
             dateRange <- DateRangeGenerator[F]
               .getDateRange(from, to)
@@ -142,9 +149,10 @@ final class WorkService[F[_]: Sync](
 
       result <- EitherT.right[DateValidationError] {
         for {
-          holidays <- holidayStore
-            .getAllForUserBetweenDates(user.id, from, to.plusDays(1L))
-            .map(_.map(holiday => holiday.date -> holiday).toMap)
+          holidays <- getHolidayMap {
+            holidayStore
+              .getAllForUserBetweenDates(user.id, from, to.plusDays(1L))
+          }
 
           workSamples <- workSampleStore
             .getAllForUserBetweenDates(user.id, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
@@ -179,6 +187,20 @@ final class WorkService[F[_]: Sync](
       result <- EitherT
         .right[DateValidationError](workSampleStore.wasAtWork(user, date))
     } yield result
+
+  private def getHolidayMap(holidays: F[List[Holiday]]): F[Map[LocalDate, Holiday]] =
+    holidays
+      .flatMap { holidays =>
+        holidays
+          .flatTraverse { holiday =>
+            DateRangeGenerator[F]
+              .getDateStream(holiday.fromDate, holiday.toDate)
+              .map(date => date -> holiday)
+              .compile
+              .toList
+          }
+          .map(_.toMap)
+      }
 
   private def createWorkSample(
     userId: UserId,

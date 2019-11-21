@@ -10,51 +10,88 @@ import com.timesheet.core.store.holiday.HolidayStoreAlgebra
 import com.timesheet.core.store.holidayrequest.HolidayRequestStoreAlgebra
 import com.timesheet.core.validation.ValidationUtils._
 import com.timesheet.core.validation.holiday.HolidayValidatorAlgebra
-import com.timesheet.model.db.ID
 import com.timesheet.model.holiday.{Holiday, HolidayType}
+import com.timesheet.model.holidayrequest.HolidayRequest
 import com.timesheet.model.user.User
 
 final class HolidayValidator[F[_]: Monad](
   holidayStore: HolidayStoreAlgebra[F],
   holidayRequestStore: HolidayRequestStoreAlgebra[F],
 ) extends HolidayValidatorAlgebra[F] {
-  def checkIfUserCanTakeHoliday(
-    user: User,
-    date: LocalDate,
-    holidayType: HolidayType,
-  ): EitherT[F, ValidationUtils.HolidayValidationError, Holiday] =
-    EitherT.fromEither[F] {
-      Holiday(
-        ID.createNew(),
-        user.id,
-        date,
-        holidayType,
-      ).asRight[HolidayValidationError]
-    }
 
-  def checkIfUserCanRequestHoliday(
+  override def checkIfUserCanRequestHoliday(
     user: User,
-    date: LocalDate,
-    amountOfDays: Int,
+    fromDate: LocalDate,
+    toDate: LocalDate,
     holidayType: HolidayType,
   ): EitherT[F, HolidayRequestValidationError, Unit] =
     for {
-      holidaysCountedDays <- EitherT.liftF {
+      countedDays <- EitherT.liftF {
         for {
-          fromDate <- Year.of(date.getYear).atDay(1).pure[F]
-          toDate   <- Year.of(date.getYear + 1).atDay(1).pure[F]
-          holidayCountInYear <- holidayStore
-            .countForUserForDateRange(user.id, fromDate, toDate)
-          holidayRequestsCountInYear <- holidayRequestStore
-            .countPendingForUserForDateRange(user.id, fromDate, toDate)
-        } yield holidayCountInYear + holidayRequestsCountInYear
+          fromDateF       <- Year.of(fromDate.getYear).atDay(1).pure[F]
+          toDateF         <- Year.of(toDate.getYear + 1).atDay(1).pure[F]
+          holidays        <- holidayStore.getAllForUserBetweenDates(user.id, fromDateF, toDateF)
+          holidayRequests <- holidayRequestStore.getAllPendingForUserBetweenDates(user.id, fromDateF, toDateF)
+          holidayDays        = normalizeHolidaysAndGetDays(holidays, fromDateF, toDateF)
+          holidayRequestDays = normalizeHolidayRequestsAndGetDays(holidayRequests, fromDateF, toDateF)
+        } yield holidayDays + holidayRequestDays
       }
-      holidayRequest <- EitherT.cond[F](
-        holidaysCountedDays + amountOfDays <= user.holidaysPerYear,
-        (),
-        NotEnoughDaysForHolidays(amountOfDays, user.holidaysPerYear - holidaysCountedDays.toInt): HolidayRequestValidationError,
+      requestedHolidayDays <- EitherT
+        .rightT[F, HolidayRequestValidationError] {
+          toDate.toEpochDay - fromDate.toEpochDay + 1
+        }
+      userHolidaysDays <- EitherT
+        .rightT[F, HolidayRequestValidationError] {
+          (toDate.getYear - fromDate.getYear + 1) * user.holidaysPerYear
+        }
+      _ <- EitherT.condUnit[F, HolidayRequestValidationError](
+        countedDays + requestedHolidayDays <= userHolidaysDays,
+        NotEnoughDaysForHolidays(
+          requestedHolidayDays.toInt,
+          (userHolidaysDays - countedDays).toInt,
+        ),
       )
-    } yield holidayRequest
+    } yield ()
+
+  private def normalizeHolidaysAndGetDays(
+    holidays: List[Holiday],
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): Long = {
+    import com.timesheet.util.LocalDateTypeClassInstances._
+
+    holidays
+      .map { holiday =>
+        holiday.copy(
+          fromDate = holiday.fromDate.max(fromDate),
+          toDate = holiday.toDate.min(toDate),
+        )
+      }
+      .foldLeft(0L) {
+        case (days, holiday) =>
+          days + (holiday.toDate.toEpochDay - holiday.fromDate.toEpochDay + 1)
+      }
+  }
+
+  private def normalizeHolidayRequestsAndGetDays(
+    holidayRequests: List[HolidayRequest],
+    fromDate: LocalDate,
+    toDate: LocalDate,
+  ): Long = {
+    import com.timesheet.util.LocalDateTypeClassInstances._
+
+    holidayRequests
+      .map { holidayRequest =>
+        holidayRequest.copy(
+          fromDate = holidayRequest.fromDate.max(fromDate),
+          toDate = holidayRequest.toDate.min(toDate),
+        )
+      }
+      .foldLeft(0L) {
+        case (days, holidayRequest) =>
+          days + (holidayRequest.toDate.toEpochDay - holidayRequest.fromDate.toEpochDay + 1)
+      }
+  }
 }
 
 object HolidayValidator {

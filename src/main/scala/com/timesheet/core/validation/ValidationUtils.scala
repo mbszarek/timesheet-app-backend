@@ -2,10 +2,15 @@ package com.timesheet.core.validation
 
 import java.time.LocalDate
 
+import com.timesheet.model.db.ID
 import com.timesheet.model.user.User
 
 object ValidationUtils {
   sealed trait BasicError extends Product with Serializable
+
+  sealed trait EntityError                    extends BasicError
+  final case class EntityNotFound(id: ID)     extends EntityError
+  final case class EntityRemovalError(id: ID) extends EntityError
 
   sealed trait DateValidationError extends BasicError
   case object DateInTheFuture      extends DateValidationError
@@ -15,6 +20,7 @@ object ValidationUtils {
   sealed trait UserValidationError               extends BasicError
   final case class UserAlreadyExists(user: User) extends UserValidationError
   case object UserDoesNotExists                  extends UserValidationError
+  case object RestrictedAccess                   extends UserValidationError
 
   sealed trait WorkSampleValidationError extends DateValidationError
   final case object WrongUserState       extends WorkSampleValidationError

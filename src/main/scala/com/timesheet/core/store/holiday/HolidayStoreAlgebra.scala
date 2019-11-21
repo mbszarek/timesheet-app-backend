@@ -13,7 +13,7 @@ import com.timesheet.model.user.UserId
 import scala.reflect.ClassTag
 
 trait HolidayStoreAlgebra[F[_]] extends StoreAlgebra[F] {
-  override type K = Holiday
+  override type Entity = Holiday
 
   protected def tag: ClassTag[Holiday]      = implicitly
   protected def codec: GenCodec[Holiday]    = implicitly
@@ -26,15 +26,4 @@ trait HolidayStoreAlgebra[F[_]] extends StoreAlgebra[F] {
     fromDate: LocalDate,
     toDate: LocalDate,
   ): F[List[Holiday]]
-
-  def deleteUserHolidayForDate(
-    userId: UserId,
-    date: LocalDate,
-  ): OptionT[F, Holiday]
-
-  def countForUserForDateRange(
-    userId: UserId,
-    fromDate: LocalDate,
-    toDate: LocalDate,
-  ): F[Long]
 }

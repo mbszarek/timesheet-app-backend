@@ -4,13 +4,13 @@ package core.store.holidayrequest.impl
 import java.time.LocalDate
 
 import cats.implicits._
-import cats.data._
 import cats.effect._
 import com.timesheet.core.store.base.StoreAlgebraImpl
 import com.timesheet.core.store.holidayrequest.HolidayRequestStoreAlgebra
 import com.timesheet.model.holidayrequest.{HolidayRequest, Status}
 import com.timesheet.model.user.UserId
 import org.mongodb.scala.MongoCollection
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 
 final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
@@ -40,8 +40,7 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
         .find(
           and(
             userIdRef equal userId,
-            dateRef gte fromDate,
-            dateRef lte toDate,
+            getBetweenDatesQuery(fromDate, toDate),
           ),
         )
         .compileFS2
@@ -56,10 +55,7 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
       coll <- collection
       holidayRequests <- coll
         .find(
-          and(
-            dateRef gte fromDate,
-            dateRef lte toDate,
-          ),
+          getBetweenDatesQuery(fromDate, toDate),
         )
         .compileFS2
         .toList
@@ -90,8 +86,7 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
         .find(
           and(
             userIdRef equal userId,
-            dateRef gte fromDate,
-            dateRef lte toDate,
+            getBetweenDatesQuery(fromDate, toDate),
             statusRef equal Status.Pending,
           ),
         )
@@ -99,39 +94,24 @@ final class HolidayRequestStoreMongo[F[_]: ConcurrentEffect]
         .toList
     } yield holidayRequests
 
-  override def deleteUserHolidayRequestForDate(
-    userId: UserId,
-    date: LocalDate,
-  ): OptionT[F, HolidayRequest] =
-    OptionT {
-      for {
-        coll <- collection
-        holidayRequest <- coll
-          .findOneAndDelete(and(userIdRef equal userId, dateRef equal date))
-          .compileFS2
-          .last
-      } yield holidayRequest
-    }
-
-  override def countPendingForUserForDateRange(
-    userId: UserId,
+  private def getBetweenDatesQuery(
     fromDate: LocalDate,
     toDate: LocalDate,
-  ): F[Long] =
-    for {
-      coll <- collection
-      result <- coll
-        .countDocuments(
-          and(
-            userIdRef equal userId,
-            dateRef gte fromDate,
-            dateRef lte toDate,
-            statusRef equal Status.Pending,
-          ),
-        )
-        .compileFS2
-        .lastOrError
-    } yield result
+  ): Bson =
+    or(
+      and(
+        toDateRef gte fromDate,
+        toDateRef lte toDate,
+      ),
+      and(
+        fromDateRef lte toDate,
+        fromDateRef gte fromDate,
+      ),
+      and(
+        toDateRef gte toDate,
+        fromDateRef lte fromDate,
+      ),
+    )
 }
 
 object HolidayRequestStoreMongo {

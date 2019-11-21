@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 import com.avsystem.commons.mongo.BsonRef
 import com.avsystem.commons.serialization.{HasGenCodecWithDeps, name}
-import com.timesheet.model.db.{DBEntityWithID, DBEntityWithIDCompanion, ID}
+import com.timesheet.model.db.{DBEntityWithID, DBEntityWithIDCompanion, DBEntityWithUserId, ID}
 import com.timesheet.model.holiday.{Holiday, HolidayType}
 import com.timesheet.model.user.UserId
 import com.timesheet.util.LocalDateTypeClassInstances
@@ -12,16 +12,19 @@ import com.timesheet.util.LocalDateTypeClassInstances
 final case class HolidayRequest(
   @name("_id") id: ID,
   userId: UserId,
-  date: LocalDate,
+  fromDate: LocalDate,
+  toDate: LocalDate,
   holidayType: HolidayType,
   description: String,
   status: Status,
-) extends DBEntityWithID {
+) extends DBEntityWithID
+    with DBEntityWithUserId {
 
   def toHoliday: Holiday = Holiday(
     ID.createNew(),
     userId,
-    date,
+    fromDate,
+    toDate,
     holidayType,
   )
 
@@ -36,8 +39,9 @@ object HolidayRequest
     with DBEntityWithIDCompanion[HolidayRequest] {
   import LocalDateTypeClassInstances.Codec
 
-  implicit val idRef: BsonRef[HolidayRequest, ID] = bson.ref(_.id)
-  val userIdRef: BsonRef[HolidayRequest, UserId]  = bson.ref(_.userId)
-  val dateRef: BsonRef[HolidayRequest, LocalDate] = bson.ref(_.date)
-  val statusRef: BsonRef[HolidayRequest, Status]  = bson.ref(_.status)
+  implicit val idRef: BsonRef[HolidayRequest, ID]     = bson.ref(_.id)
+  val userIdRef: BsonRef[HolidayRequest, UserId]      = bson.ref(_.userId)
+  val fromDateRef: BsonRef[HolidayRequest, LocalDate] = bson.ref(_.fromDate)
+  val toDateRef: BsonRef[HolidayRequest, LocalDate]   = bson.ref(_.toDate)
+  val statusRef: BsonRef[HolidayRequest, Status]      = bson.ref(_.status)
 }

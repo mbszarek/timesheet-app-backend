@@ -5,117 +5,66 @@ import java.time.LocalDate
 import cats.data.EitherT
 import cats.effect.Concurrent
 import cats.implicits._
+import com.timesheet.core.service.base.EntityServiceAlgebra.EntityStore
+import com.timesheet.core.service.base.impl.EntityServiceImpl
 import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
 import com.timesheet.core.store.holidayrequest.HolidayRequestStoreAlgebra
-import com.timesheet.core.validation.ValidationUtils.{DateValidationError, HolidayRequestNotFound}
+import com.timesheet.core.validation.ValidationUtils.{BasicError, DateValidationError, EntityNotFound, EntityRemovalError, HolidayRequestNotFound}
 import com.timesheet.core.validation.date.DateValidatorAlgebra
 import com.timesheet.core.validation.holiday.HolidayValidatorAlgebra
+import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.model.db.ID
 import com.timesheet.model.holiday.HolidayType
 import com.timesheet.model.holidayrequest.{HolidayRequest, Status}
 import com.timesheet.model.user.{User, UserId}
-import com.timesheet.util.DateRangeGenerator
-import fs2._
 
 final class HolidayRequestService[F[_]: Concurrent](
+  userValidator: UserValidatorAlgebra[F],
   dateValidator: DateValidatorAlgebra[F],
   holidayValidator: HolidayValidatorAlgebra[F],
   holidayRequestStore: HolidayRequestStoreAlgebra[F],
-) extends HolidayRequestServiceAlgebra[F] {
+) extends EntityServiceImpl[F] with HolidayRequestServiceAlgebra[F] {
+
+  override protected def entityStore: EntityStore[F, HolidayRequest] = holidayRequestStore
 
   override def createHolidayRequest(
     user: User,
-    date: LocalDate,
-    holidayType: HolidayType,
-    description: String,
-  ): EitherT[F, DateValidationError, HolidayRequest] =
-    for {
-      _ <- dateValidator
-        .isDateInTheFuture(date.atStartOfDay())
-
-      _ <- holidayValidator
-        .checkIfUserCanRequestHoliday(user, date, 1, holidayType)
-
-      result <- EitherT
-        .right[DateValidationError] {
-          holidayRequestStore
-            .create(createHolidayRequestEntity(user.id, date, holidayType, description))
-        }
-    } yield result
-
-  override def createHolidayRequestForDateRange(
-    user: User,
     fromDate: LocalDate,
     toDate: LocalDate,
     holidayType: HolidayType,
     description: String,
-  ): EitherT[F, DateValidationError, List[HolidayRequest]] =
+  ): EitherT[F, DateValidationError, HolidayRequest] =
     for {
-      _ <- dateValidator
-        .isDateInTheFuture(fromDate.atStartOfDay())
-
-      _ <- dateValidator
-        .areDatesInProperOrder(fromDate.atStartOfDay(), toDate.atStartOfDay())
-
-      dates <- EitherT
-        .right[DateValidationError](DateRangeGenerator[F].getDateRange(fromDate, toDate))
+      _ <- dateValidator.isDateInTheFuture(fromDate.atStartOfDay())
+      _ <- dateValidator.areDatesInProperOrder(fromDate.atStartOfDay(), toDate.atStartOfDay())
 
       _ <- holidayValidator
-        .checkIfUserCanRequestHoliday(user, dates.head, dates.size, holidayType)
+        .checkIfUserCanRequestHoliday(user, fromDate, toDate, holidayType)
+        .leftWiden[DateValidationError]
 
-      result <- EitherT
-        .right[DateValidationError] {
-          Stream
-            .apply(dates: _*)
-            .covary[F]
-            .evalMap { date =>
-              holidayRequestStore.create(createHolidayRequestEntity(user.id, date, holidayType, description))
-            }
-            .compile
-            .toList
-        }
-    } yield result
+      holidayRequest <- EitherT
+        .right[DateValidationError](
+          holidayRequestStore.create(createHolidayRequestEntity(user.id, fromDate, toDate, holidayType, description)),
+        )
+    } yield holidayRequest
 
   override def deleteHolidayRequest(
     user: User,
-    date: LocalDate,
-  ): EitherT[F, DateValidationError, HolidayRequest] =
-    EitherT {
-      holidayRequestStore
-        .deleteUserHolidayRequestForDate(user.id, date)
-        .fold[Either[DateValidationError, HolidayRequest]](
-          HolidayRequestNotFound(
-            user,
-            date,
-          ).asLeft[HolidayRequest],
-        )(_.asRight[DateValidationError])
-    }
-
-  override def deleteHolidayRequestsForDateRange(
-    user: User,
-    fromDate: LocalDate,
-    toDate: LocalDate,
-  ): EitherT[F, DateValidationError, List[HolidayRequest]] =
+    id: ID,
+  ): EitherT[F, BasicError, HolidayRequest] =
     for {
-      _ <- dateValidator
-        .isDateInTheFuture(fromDate.atStartOfDay())
+      entity <- holidayRequestStore
+        .get(id)
+        .toRight[BasicError](EntityNotFound(id))
 
-      _ <- dateValidator
-        .areDatesInProperOrder(fromDate.atStartOfDay(), toDate.atStartOfDay())
+      _ <- userValidator
+        .canModifyResource(user, entity)
+        .leftWiden[BasicError]
 
-      holidayRequests <- EitherT
-        .right[DateValidationError] {
-          (for {
-            date <- DateRangeGenerator[F].getDateStream(fromDate, toDate)
-            holidayRequestOption <- Stream.eval(
-              holidayRequestStore.deleteUserHolidayRequestForDate(user.id, date).value,
-            )
-            holidayRequest <- Stream(holidayRequestOption.toSeq: _*)
-          } yield holidayRequest)
-            .compile
-            .toList
-        }
-    } yield holidayRequests
+      _ <- holidayRequestStore
+        .delete(id)
+        .toRight[BasicError](EntityRemovalError(id))
+    } yield entity
 
   override def getAllHolidayRequests(): F[List[HolidayRequest]] =
     holidayRequestStore
@@ -170,14 +119,16 @@ final class HolidayRequestService[F[_]: Concurrent](
 
   private def createHolidayRequestEntity(
     userId: UserId,
-    date: LocalDate,
+    fromDate: LocalDate,
+    toDate: LocalDate,
     holidayType: HolidayType,
     description: String,
   ): HolidayRequest =
     HolidayRequest(
       ID.createNew(),
       userId,
-      date,
+      fromDate,
+      toDate,
       holidayType,
       description,
       Status.Pending,
@@ -186,8 +137,10 @@ final class HolidayRequestService[F[_]: Concurrent](
 
 object HolidayRequestService {
   def apply[F[_]: Concurrent](
+    userValidator: UserValidatorAlgebra[F],
     dateValidator: DateValidatorAlgebra[F],
     holidayValidator: HolidayValidatorAlgebra[F],
     holidayRequestStore: HolidayRequestStoreAlgebra[F],
-  ): HolidayRequestService[F] = new HolidayRequestService[F](dateValidator, holidayValidator, holidayRequestStore)
+  ): HolidayRequestService[F] =
+    new HolidayRequestService[F](userValidator, dateValidator, holidayValidator, holidayRequestStore)
 }

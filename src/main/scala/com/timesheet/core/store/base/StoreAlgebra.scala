@@ -8,19 +8,19 @@ import com.timesheet.model.db.{DBEntityWithID, ID}
 import scala.reflect.ClassTag
 
 trait StoreAlgebra[F[_]] {
-  type K <: DBEntityWithID
+  type Entity <: DBEntityWithID
 
-  implicit protected def tag: ClassTag[K]
-  implicit protected def codec: GenCodec[K]
-  implicit protected def idRef: BsonRef[K, ID]
+  implicit protected def tag: ClassTag[Entity]
+  implicit protected def codec: GenCodec[Entity]
+  implicit protected def idRef: BsonRef[Entity, ID]
 
-  def create(entity: K): F[K]
+  def create(entity: Entity): F[Entity]
 
-  def update(entity: K): OptionT[F, K]
+  def update(entity: Entity): OptionT[F, Entity]
 
-  def get(id: ID): OptionT[F, K]
+  def get(id: ID): OptionT[F, Entity]
 
-  def getAll(): F[List[K]]
+  def getAll(): F[List[Entity]]
 
-  def delete(id: ID): OptionT[F, K]
+  def delete(id: ID): OptionT[F, Entity]
 }

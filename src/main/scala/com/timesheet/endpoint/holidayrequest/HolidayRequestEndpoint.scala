@@ -6,8 +6,10 @@ import cats.implicits._
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
+import com.timesheet.core.validation.ValidationUtils.{BasicError, DateValidationError}
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.holidayrequest.{CreateHolidayRequestDTO, DeleteHolidayRequestDTO}
+import com.timesheet.model.db.ID
+import com.timesheet.model.rest.holidayrequest.CreateHolidayRequestDTO
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -61,8 +63,10 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
   ): AuthEndpoint[F, Auth] = {
     case req @ POST -> Root asAuthed user => {
       for {
-        request <- EitherT.liftF(req.request.as[CreateHolidayRequestDTO])
-        _ <- holidayRequestService.createHolidayRequestForDateRange(
+        request <- EitherT
+          .right[DateValidationError](req.request.as[CreateHolidayRequestDTO])
+
+        _ <- holidayRequestService.createHolidayRequest(
           user,
           request.fromDate,
           request.toDate,
@@ -75,18 +79,19 @@ final class HolidayRequestEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sD
       case Left(ex) => BadRequest(ex.asJson)
     }
 
-    case req @ DELETE -> Root asAuthed user => {
+    case DELETE -> Root / id asAuthed user => {
       for {
-        request <- EitherT.liftF(req.request.as[DeleteHolidayRequestDTO])
-        holidayRequests <- holidayRequestService.deleteHolidayRequestsForDateRange(
+        id <- EitherT
+          .rightT[F, BasicError](ID(id))
+
+        holidayRequests <- holidayRequestService.deleteHolidayRequest(
           user,
-          request.fromDate,
-          request.toDate,
+          id,
         )
       } yield holidayRequests
     }.value >>= {
-      case Right(holidayRequests) => Ok(holidayRequests.asJson)
-      case Left(ex)               => BadRequest(ex.asJson)
+      case Right(holidayRequest) => Ok(holidayRequest.asJson)
+      case Left(ex)              => BadRequest(ex.asJson)
     }
   }
 

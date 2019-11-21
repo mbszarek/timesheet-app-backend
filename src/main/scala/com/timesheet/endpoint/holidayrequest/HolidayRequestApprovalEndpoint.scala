@@ -1,7 +1,5 @@
 package com.timesheet.endpoint.holidayrequest
 
-import java.time.LocalDate
-
 import cats.data._
 import cats.effect._
 import cats.implicits._
@@ -9,14 +7,15 @@ import com.timesheet.core.auth.Auth
 import com.timesheet.core.service.holidayapproval.HolidayApprovalServiceAlgebra
 import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
 import com.timesheet.core.service.user.UserServiceAlgebra
-import com.timesheet.core.validation.ValidationUtils.BasicError
+import com.timesheet.core.validation.ValidationUtils.{BasicError, EntityNotFound}
 import com.timesheet.core.validation.date.DateValidatorAlgebra
+import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.holidayrequest.{ApproveHolidayRequestDTO, DenyHolidayRequestDTO}
+import com.timesheet.model.db.ID
+import com.timesheet.model.holidayrequest.HolidayRequest
 import com.timesheet.model.user.{User, UserId}
 import io.circe.generic.auto._
 import io.circe.syntax._
-import fs2._
 import org.http4s.HttpRoutes
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
@@ -28,78 +27,42 @@ final class HolidayRequestApprovalEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends
     userService: UserServiceAlgebra[F],
     holidayRequestService: HolidayRequestServiceAlgebra[F],
     holidayApprovalService: HolidayApprovalServiceAlgebra[F],
+    userValidator: UserValidatorAlgebra[F],
     dateValidator: DateValidatorAlgebra[F],
   ): AuthEndpoint[F, Auth] = {
-    case req @ POST -> Root / "approve" asAuthed user => {
+    case POST -> Root / id / "approve" asAuthed user => {
       for {
-        request <- EitherT
-          .right[BasicError](req.request.as[ApproveHolidayRequestDTO])
-
-        requestedUser <- userService
-          .getUserByUsername(request.username)
-          .leftWiden[BasicError]
-
-        _ <- checkRequestDates(dateValidator, request.fromDate, request.toDate)
-
-        holidayRequests <- holidayRequestService
-          .getAllPendingHolidayRequestsForUserBetweenDates(requestedUser.id, request.fromDate, request.toDate)
-          .leftWiden[BasicError]
-
-        holidays <- EitherT
-          .right[BasicError] {
-            (for {
-              holidayRequest <- Stream(holidayRequests: _*)
-                .covary[F]
-
-              holiday <- Stream
-                .eval {
-                  holidayApprovalService
-                    .approveHolidays(user, holidayRequest)
-                }
-            } yield holiday)
-              .compile
-              .toList
-          }
-      } yield holidays
+        id <- EitherT
+          .rightT[F, BasicError](ID(id))
+        holidayRequest <- holidayRequestService.get(id)
+        _              <- userValidator.canModifyResource(user, holidayRequest)
+        holiday <- EitherT.right[BasicError] {
+          holidayApprovalService.approveHolidays(user, holidayRequest)
+        }
+      } yield holiday
     }.value >>= {
-      case Left(ex)        => BadRequest(ex.asJson)
-      case Right(holidays) => Ok(holidays.asJson)
+      case Left(ex)       => BadRequest(ex.asJson)
+      case Right(holiday) => Ok(holiday.asJson)
     }
 
-    case req @ POST -> Root / "deny" asAuthed user => {
+    case POST -> Root / id / "deny" asAuthed user => {
       for {
-        request <- EitherT
-          .right[BasicError](req.request.as[DenyHolidayRequestDTO])
-
-        requestedUser <- userService
-          .getUserByUsername(request.username)
-          .leftWiden[BasicError]
-
-        _ <- checkRequestDates(dateValidator, request.fromDate, request.toDate)
-
-        holidayRequests <- holidayRequestService
-          .getAllPendingHolidayRequestsForUserBetweenDates(requestedUser.id, request.fromDate, request.toDate)
-          .leftWiden[BasicError]
-
-        holidays <- EitherT
-          .right[BasicError] {
-            (for {
-              holidayRequest <- Stream(holidayRequests: _*)
-                .covary[F]
-
-              holiday <- Stream
-                .eval {
-                  holidayApprovalService
-                    .denyHolidays(user, request.reason, holidayRequest)
-                }
-            } yield holiday)
-              .compile
-              .toList
-          }
-      } yield holidays
+        id <- EitherT
+          .rightT[F, BasicError](ID(id))
+        holidayRequest <- holidayRequestService.get(id)
+        _              <- userValidator.canModifyResource(user, holidayRequest)
+        holidayOpt <- EitherT.right[BasicError] {
+          holidayApprovalService.denyHolidays(user, None, holidayRequest)
+        }
+        holiday <- holidayOpt.fold[EitherT[F, BasicError, HolidayRequest]] {
+          EitherT.leftT[F, HolidayRequest](EntityNotFound(id))
+        } { holiday =>
+          EitherT.rightT[F, BasicError](holiday)
+        }
+      } yield holiday
     }.value >>= {
-      case Left(ex)        => BadRequest(ex.asJson)
-      case Right(holidays) => Ok(holidays.asJson)
+      case Left(ex)       => BadRequest(ex.asJson)
+      case Right(holiday) => Ok(holiday.asJson)
     }
   }
 
@@ -108,6 +71,7 @@ final class HolidayRequestApprovalEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends
     userService: UserServiceAlgebra[F],
     holidayRequestService: HolidayRequestServiceAlgebra[F],
     holidayApprovalService: HolidayApprovalServiceAlgebra[F],
+    userValidator: UserValidatorAlgebra[F],
     dateValidator: DateValidatorAlgebra[F],
   ): HttpRoutes[F] =
     auth.liftService {
@@ -116,24 +80,11 @@ final class HolidayRequestApprovalEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends
           userService,
           holidayRequestService,
           holidayApprovalService,
+          userValidator,
           dateValidator,
         )
       }
     }
-
-  private def checkRequestDates(
-    dateValidator: DateValidatorAlgebra[F],
-    firstDate: LocalDate,
-    nextDate: LocalDate,
-  ): EitherT[F, BasicError, Unit] = {
-    for {
-      _ <- dateValidator
-        .isDateInTheFuture(firstDate.atStartOfDay())
-
-      _ <- dateValidator
-        .areDatesInProperOrder(firstDate.atStartOfDay(), nextDate.atStartOfDay())
-    } yield ()
-  }.leftWiden[BasicError]
 }
 
 object HolidayRequestApprovalEndpoint {
@@ -142,8 +93,9 @@ object HolidayRequestApprovalEndpoint {
     userService: UserServiceAlgebra[F],
     holidayRequestService: HolidayRequestServiceAlgebra[F],
     holidayApprovalService: HolidayApprovalServiceAlgebra[F],
+    userValidator: UserValidatorAlgebra[F],
     dateValidator: DateValidatorAlgebra[F],
   ): HttpRoutes[F] =
     new HolidayRequestApprovalEndpoint[F, Auth]
-      .endpoints(auth, userService, holidayRequestService, holidayApprovalService, dateValidator)
+      .endpoints(auth, userService, holidayRequestService, holidayApprovalService, userValidator, dateValidator)
 }

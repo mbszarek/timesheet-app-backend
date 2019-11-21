@@ -39,19 +39,24 @@ final class Server[F[_]: ConcurrentEffect] {
   ): Stream[F, Nothing] = {
     for {
       key <- Stream.eval(HMACSHA256.generateKey[F])
-      authStore              = AuthStoreMongo[F, HMACSHA256](key)
-      userStore              = UserStoreMongo[F]
-      workSampleStore        = WorkSampleStoreMongo[F]
-      holidayStore           = HolidayStoreMongo[F]
-      holidayRequestStore    = HolidayRequestStoreMongo[F]
-      userValidator          = UserValidator[F](userStore)
-      workSampleValidator    = WorkSampleValidator[F]
-      dateValidator          = DateValidator[F]
-      holidayValidator       = HolidayValidator[F](holidayStore, holidayRequestStore)
-      userService            = UserService[F](userStore, userValidator)
-      workService            = WorkService[F](userStore, workSampleStore, workSampleValidator, holidayStore, dateValidator)
-      holidayService         = HolidayService[F](dateValidator, holidayValidator, holidayStore)
-      holidayRequestService  = HolidayRequestService[F](dateValidator, holidayValidator, holidayRequestStore)
+      authStore           = AuthStoreMongo[F, HMACSHA256](key)
+      userStore           = UserStoreMongo[F]
+      workSampleStore     = WorkSampleStoreMongo[F]
+      holidayStore        = HolidayStoreMongo[F]
+      holidayRequestStore = HolidayRequestStoreMongo[F]
+      userValidator       = UserValidator[F](userStore)
+      workSampleValidator = WorkSampleValidator[F]
+      dateValidator       = DateValidator[F]
+      holidayValidator    = HolidayValidator[F](holidayStore, holidayRequestStore)
+      userService         = UserService[F](userStore, userValidator)
+      workService         = WorkService[F](userStore, workSampleStore, workSampleValidator, holidayStore, dateValidator)
+      holidayService      = HolidayService[F](userValidator, dateValidator, holidayValidator, holidayStore)
+      holidayRequestService = HolidayRequestService[F](
+        userValidator,
+        dateValidator,
+        holidayValidator,
+        holidayRequestStore,
+      )
       holidayApprovalService = HolidayApprovalService[F](holidayStore, holidayRequestStore)
       authenticator          = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth              = SecuredRequestHandler(authenticator)
@@ -71,6 +76,7 @@ final class Server[F[_]: ConcurrentEffect] {
           userService,
           holidayRequestService,
           holidayApprovalService,
+          userValidator,
           dateValidator,
         ),
       ).orNotFound

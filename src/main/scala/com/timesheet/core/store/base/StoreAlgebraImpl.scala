@@ -9,9 +9,9 @@ import com.timesheet.model.db.ID
 
 abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] with MongoDriverMixin[F] {
 
-  override type T = K
+  override type T = Entity
 
-  override def create(entity: K): F[K] =
+  override def create(entity: Entity): F[Entity] =
     for {
       coll <- collection
       _ <- coll
@@ -20,7 +20,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
         .drain
     } yield entity
 
-  override def update(entity: K): OptionT[F, K] =
+  override def update(entity: Entity): OptionT[F, Entity] =
     OptionT.liftF {
       for {
         coll <- collection
@@ -31,7 +31,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
       } yield entity
     }
 
-  override def get(id: ID): OptionT[F, K] =
+  override def get(id: ID): OptionT[F, Entity] =
     OptionT {
       for {
         coll <- collection
@@ -42,7 +42,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
       } yield entity
     }
 
-  override def getAll(): F[List[K]] =
+  override def getAll(): F[List[Entity]] =
     for {
       coll <- collection
       entities <- coll
@@ -51,7 +51,7 @@ abstract class StoreAlgebraImpl[F[_]: ConcurrentEffect] extends StoreAlgebra[F] 
         .toList
     } yield entities
 
-  override def delete(id: ID): OptionT[F, K] =
+  override def delete(id: ID): OptionT[F, Entity] =
     OptionT {
       for {
         coll <- collection

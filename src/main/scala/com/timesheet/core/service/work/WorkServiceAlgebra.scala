@@ -3,11 +3,14 @@ package com.timesheet.core.service.work
 import java.time.{LocalDate, LocalDateTime}
 
 import cats.data._
+import com.timesheet.core.service.base.EntityServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.{DateValidationError, WorkSampleValidationError}
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.{WorkInterval, WorkSample, WorkTime}
 
-trait WorkServiceAlgebra[F[_]] {
+trait WorkServiceAlgebra[F[_]] extends EntityServiceAlgebra[F] {
+  override type Entity = WorkSample
+
   def tagWorkerEntrance(user: User): EitherT[F, WorkSampleValidationError, WorkSample]
 
   def tagWorkerExit(user: User): EitherT[F, WorkSampleValidationError, WorkSample]

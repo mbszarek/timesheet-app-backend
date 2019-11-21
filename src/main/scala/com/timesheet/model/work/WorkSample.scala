@@ -5,7 +5,7 @@ import java.time.Instant
 import com.avsystem.commons.mongo.BsonRef
 import cats.effect.Sync
 import com.avsystem.commons.serialization.{HasGenCodecWithDeps, name}
-import com.timesheet.model.db.{DBEntityWithID, DBEntityWithIDCompanion, ID}
+import com.timesheet.model.db.{DBEntityWithID, DBEntityWithIDCompanion, DBEntityWithUserId, ID}
 import com.timesheet.model.user.UserId
 import com.timesheet.util.InstantTypeClassInstances
 import io.circe.generic.auto._
@@ -18,6 +18,7 @@ final case class WorkSample(
   activityType: ActivityType,
   date: Instant,
 ) extends DBEntityWithID
+    with DBEntityWithUserId
 
 object WorkSample
     extends HasGenCodecWithDeps[InstantTypeClassInstances.type, WorkSample]

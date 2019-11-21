@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
 
 trait HolidayRequestStoreAlgebra[F[_]] extends StoreAlgebra[F] {
 
-  override type K = HolidayRequest
+  override type Entity = HolidayRequest
 
   protected def tag: ClassTag[HolidayRequest]      = implicitly
   protected def codec: GenCodec[HolidayRequest]    = implicitly
@@ -40,15 +40,4 @@ trait HolidayRequestStoreAlgebra[F[_]] extends StoreAlgebra[F] {
     fromDate: LocalDate,
     toDate: LocalDate,
   ): F[List[HolidayRequest]]
-
-  def deleteUserHolidayRequestForDate(
-    userId: UserId,
-    date: LocalDate,
-  ): OptionT[F, HolidayRequest]
-
-  def countPendingForUserForDateRange(
-    userId: UserId,
-    fromDate: LocalDate,
-    toDate: LocalDate,
-  ): F[Long]
 }

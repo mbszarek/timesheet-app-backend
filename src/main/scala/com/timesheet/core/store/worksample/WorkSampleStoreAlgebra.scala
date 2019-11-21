@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
 
 trait WorkSampleStoreAlgebra[F[_]] extends StoreAlgebra[F] {
 
-  override type K = WorkSample
+  override type Entity = WorkSample
 
   protected def tag: ClassTag[WorkSample]      = implicitly
   protected def codec: GenCodec[WorkSample]    = implicitly
