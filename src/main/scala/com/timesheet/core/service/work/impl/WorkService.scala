@@ -351,17 +351,21 @@ final class WorkService[F[_]: Sync](
       collectAllWorkIntervals(tail, wasAtWork = false, result)
     case (date, (workSamples, _)) :: tail =>
       val (workIntervals, newWasAtWork): (List[WorkInterval], Boolean) =
-        collectDayWorkIntervals(workSamples, wasAtWork, date.plusDays(1L).atStartOfDay())
+        collectDayWorkIntervals(date, workSamples, wasAtWork, date.plusDays(1L).atStartOfDay())
       collectAllWorkIntervals(tail, newWasAtWork, result ++ workIntervals)
   }
 
   @tailrec
   private def collectDayWorkIntervals(
+    date: LocalDate,
     list: List[WorkSample],
     wasAtWork: Boolean,
     lastDateTime: LocalDateTime,
     result: List[WorkInterval] = List.empty,
   ): (List[WorkInterval], Boolean) = list match {
+    case _ if date === LocalDate.now() && lastDateTime > LocalDateTime.now() =>
+      val now = LocalDateTime.now()
+      collectDayWorkIntervals(date, list, wasAtWork, now, result)
     case Nil =>
       val fromDate = lastDateTime.toLocalDate.atStartOfDay()
       val workInterval = WorkInterval.FiniteWorkInterval(
@@ -377,7 +381,7 @@ final class WorkService[F[_]: Sync](
         lastDateTime,
         wasAtWork = true,
       )
-      collectDayWorkIntervals(tail, wasAtWork = false, newLastDateTime, result :+ workInterval)
+      collectDayWorkIntervals(date, tail, wasAtWork = false, newLastDateTime, result :+ workInterval)
     case sample :: tail if sample.activityType === Departure =>
       val newLastDateTime = sample.date.toLocalDateTime()
       val workInterval = WorkInterval.FiniteWorkInterval(
@@ -385,7 +389,7 @@ final class WorkService[F[_]: Sync](
         lastDateTime,
         wasAtWork = false,
       )
-      collectDayWorkIntervals(tail, wasAtWork = true, newLastDateTime, result :+ workInterval)
+      collectDayWorkIntervals(date, tail, wasAtWork = true, newLastDateTime, result :+ workInterval)
   }
 
   private def getNextAtStartOfDayInstant(date: LocalDate): Instant =
