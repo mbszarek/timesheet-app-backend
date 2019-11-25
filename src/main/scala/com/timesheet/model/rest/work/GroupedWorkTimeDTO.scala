@@ -10,6 +10,7 @@ import org.http4s.EntityEncoder
 final case class GroupedWorkTimeDTO(
   date: LocalDate,
   duration: Long,
+  obligatoryDuration: Long,
 )
 
 object GroupedWorkTimeDTO {

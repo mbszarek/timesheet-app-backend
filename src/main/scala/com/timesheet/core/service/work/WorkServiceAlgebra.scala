@@ -48,5 +48,5 @@ trait WorkServiceAlgebra[F[_]] extends EntityServiceAlgebra[F] {
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): EitherT[F, DateValidationError, Map[LocalDate, WorkTime]]
+  ): EitherT[F, DateValidationError, Map[LocalDate, (WorkTime, WorkTime)]]
 }

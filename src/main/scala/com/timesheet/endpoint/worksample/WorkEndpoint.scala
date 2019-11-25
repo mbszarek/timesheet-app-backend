@@ -72,7 +72,8 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
             groupedWorkTimes <- Stream(workMap.toList: _*)
               .covary[F]
               .map {
-                case (date, workTime) => GroupedWorkTimeDTO(date, workTime.toSeconds)
+                case (date, (workTime, obligatoryWorkTime)) =>
+                  GroupedWorkTimeDTO(date, workTime.toSeconds, obligatoryWorkTime.toSeconds)
               }
               .compile
               .toList
@@ -168,7 +169,8 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
                 groupedWorkTimes <- Stream(workMap.toList: _*)
                   .covary[F]
                   .map {
-                    case (date, workTime) => GroupedWorkTimeDTO(date, workTime.toSeconds)
+                    case (date, (workTime, obligatoryWorkTime)) =>
+                      GroupedWorkTimeDTO(date, workTime.toSeconds, obligatoryWorkTime.toSeconds)
                   }
                   .compile
                   .toList

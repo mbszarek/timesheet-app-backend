@@ -115,12 +115,7 @@ final class WorkService[F[_]: Sync](
     } yield {
       dateRange.foldLeft(WorkTime.empty) {
         case (duration, localDate) =>
-          val workingHours = localDate.getDayOfWeek match {
-            case DayOfWeek.SATURDAY | DayOfWeek.SUNDAY =>
-              WorkTime.empty
-            case _ =>
-              WorkTime.fromMillis((user.workingHours * 60 * 60 * 1000 / 5).toLong)
-          }
+          val workingHours = getObligatoryWorkTimeForDay(user, localDate)
           duration |+| workingHours
       }
     }
@@ -190,7 +185,7 @@ final class WorkService[F[_]: Sync](
     user: User,
     from: LocalDate,
     to: LocalDate,
-  ): EitherT[F, DateValidationError, Map[LocalDate, WorkTime]] =
+  ): EitherT[F, DateValidationError, Map[LocalDate, (WorkTime, WorkTime)]] =
     for {
       _ <- dateValidator
         .areDatesInProperOrder(from.atStartOfDay(), to.atStartOfDay())
@@ -221,7 +216,36 @@ final class WorkService[F[_]: Sync](
         )
       }
 
-    } yield result
+      obligatoryWorkTime <- EitherT
+        .right[DateValidationError](collectGroupedObligatoryWorkTimeForUser(user, from, to))
+
+    } yield {
+      (result.keySet ++ obligatoryWorkTime.keySet)
+        .map { date =>
+          date -> (result(date), obligatoryWorkTime(date))
+        }
+    }.toMap
+
+  private def collectGroupedObligatoryWorkTimeForUser(
+    user: User,
+    from: LocalDate,
+    to: LocalDate,
+  ): F[Map[LocalDate, WorkTime]] = {
+    for {
+      date <- DateRangeGenerator[F]
+        .getDateStream(from, to)
+    } yield date -> getObligatoryWorkTimeForDay(user, date)
+  }.compile.toMap
+
+  private def getObligatoryWorkTimeForDay(
+    user: User,
+    date: LocalDate,
+  ): WorkTime = date.getDayOfWeek match {
+    case DayOfWeek.SATURDAY | DayOfWeek.SUNDAY =>
+      WorkTime.empty
+    case _ =>
+      WorkTime.fromFiniteDuration((user.workingHours / 5).hour)
+  }
 
   private def getHolidayMap(holidays: F[List[Holiday]]): F[Map[LocalDate, Holiday]] =
     holidays
