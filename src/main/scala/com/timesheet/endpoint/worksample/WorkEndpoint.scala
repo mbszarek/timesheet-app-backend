@@ -10,7 +10,7 @@ import com.timesheet.core.service.user.UserServiceAlgebra
 import com.timesheet.core.service.work.WorkServiceAlgebra
 import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
-import com.timesheet.model.rest.work.{GetWorkingTimeResultDTO, WorkSampleDTO}
+import com.timesheet.model.rest.work.{GetGroupedWorkTimeDTO, GetWorkingTimeResultDTO, GroupedWorkTimeDTO, WorkSampleDTO}
 import com.timesheet.model.user.{User, UserId}
 import com.timesheet.model.work.WorkSample
 import io.circe.generic.auto._
@@ -20,6 +20,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.{HttpRoutes, Response}
 import tsec.authentication._
 import tsec.jwt.algorithms.JWTMacAlgo
+import fs2._
 
 final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
@@ -61,6 +62,29 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
     case GET -> Root / "getIntervalsForDate" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
       extractWorkIntervals(workService)(user, fromDate, toDate)
+
+    case GET -> Root / "getGroupedWorkTime" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(toDate) asAuthed user =>
+      workService
+        .getWorkTimeForUserGroupedByDate(user, fromDate, toDate)
+        .value >>= {
+        case Right(workMap) =>
+          for {
+            groupedWorkTimes <- Stream(workMap.toList: _*)
+              .covary[F]
+              .map {
+                case (date, workTime) => GroupedWorkTimeDTO(date, workTime.toSeconds)
+              }
+              .compile
+              .toList
+
+            result <- Ok {
+              GetGroupedWorkTimeDTO(user.username, groupedWorkTimes.sortBy(_.date)).asJson
+            }
+          } yield result
+
+        case Left(ex) =>
+          BadRequest(ex.asJson)
+      }
   }
 
   private def otherUserLogWorkEndpoint(

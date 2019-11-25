@@ -43,4 +43,10 @@ trait WorkServiceAlgebra[F[_]] extends EntityServiceAlgebra[F] {
     user: User,
     date: LocalDateTime,
   ): EitherT[F, DateValidationError, Boolean]
+
+  def getWorkTimeForUserGroupedByDate(
+    user: User,
+    from: LocalDate,
+    to: LocalDate,
+  ): EitherT[F, DateValidationError, Map[LocalDate, WorkTime]]
 }

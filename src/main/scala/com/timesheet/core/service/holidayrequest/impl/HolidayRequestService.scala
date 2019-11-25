@@ -23,7 +23,8 @@ final class HolidayRequestService[F[_]: Concurrent](
   dateValidator: DateValidatorAlgebra[F],
   holidayValidator: HolidayValidatorAlgebra[F],
   holidayRequestStore: HolidayRequestStoreAlgebra[F],
-) extends EntityServiceImpl[F] with HolidayRequestServiceAlgebra[F] {
+) extends EntityServiceImpl[F]
+    with HolidayRequestServiceAlgebra[F] {
 
   override protected def entityStore: EntityStore[F, HolidayRequest] = holidayRequestStore
 

@@ -23,6 +23,7 @@ import com.timesheet.model.work.ActivityType.EqInstance
 import com.timesheet.model.work._
 import com.timesheet.util.DateRangeGenerator
 import com.timesheet.util.InstantTypeClassInstances.instantOrderInstance
+import com.timesheet.util.LocalDateTypeClassInstances.localDateOrderInstance
 import com.timesheet.util.LocalDateTimeTypeClassInstances.localDateTimeOrderInstance
 
 import scala.concurrent.duration._
@@ -157,10 +158,7 @@ final class WorkService[F[_]: Sync](
           workSamples <- workSampleStore
             .getAllForUserBetweenDates(user.id, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
 
-          wasAtWork <- if (to.atStartOfDay() > LocalDateTime.now())
-            false.pure[F]
-          else
-            workSampleStore.wasAtWork(user, to.plusDays(1L).atStartOfDay())
+          wasAtWork <- checkWasAtWork(user, to)
 
           dateRange <- DateRangeGenerator[F]
             .getDateRange(from, to)
@@ -186,6 +184,43 @@ final class WorkService[F[_]: Sync](
 
       result <- EitherT
         .right[DateValidationError](workSampleStore.wasAtWork(user, date))
+    } yield result
+
+  def getWorkTimeForUserGroupedByDate(
+    user: User,
+    from: LocalDate,
+    to: LocalDate,
+  ): EitherT[F, DateValidationError, Map[LocalDate, WorkTime]] =
+    for {
+      _ <- dateValidator
+        .areDatesInProperOrder(from.atStartOfDay(), to.atStartOfDay())
+
+      result <- EitherT.right[DateValidationError] {
+        for {
+          holidays <- getHolidayMap {
+            holidayStore
+              .getAllForUserBetweenDates(user.id, from, to.plusDays(1L))
+          }
+
+          workSamples <- workSampleStore
+            .getAllForUserBetweenDates(user.id, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+
+          wasAtWork <- checkWasAtWork(user, to)
+
+          groupedWorkSamples = workSamples
+            .groupBy(_.date.toLocalDate())
+
+          dateRange <- DateRangeGenerator[F]
+            .getDateRange(from, to)
+
+          newWorkSamples = extractWorkSamples(dateRange, groupedWorkSamples, holidays)
+        } yield collectGroupedWorkTime(
+          newWorkSamples,
+          user,
+          wasAtWork,
+        )
+      }
+
     } yield result
 
   private def getHolidayMap(holidays: F[List[Holiday]]): F[Map[LocalDate, Holiday]] =
@@ -218,6 +253,35 @@ final class WorkService[F[_]: Sync](
       WrongUserState,
     )
 
+  private def checkWasAtWork(
+    user: User,
+    date: LocalDate,
+  ): F[Boolean] =
+    if (date.atStartOfDay() > LocalDateTime.now())
+      false.pure[F]
+    else
+      workSampleStore.wasAtWork(user, date.plusDays(1L).atStartOfDay())
+
+  @tailrec
+  private def collectGroupedWorkTime(
+    list: List[(LocalDate, (List[WorkSample], Option[Holiday]))],
+    user: User,
+    wasAtWork: Boolean = false,
+    result: Map[LocalDate, WorkTime] = Map.empty,
+  ): Map[LocalDate, WorkTime] = list match {
+    case Nil =>
+      result
+    case (date, (_, Some(_))) :: tail =>
+      collectGroupedWorkTime(
+        tail,
+        user,
+        wasAtWork = false,
+        result + (date -> WorkTime.fromFiniteDuration((user.workingHours / 5).hour)),
+      )
+    case (date, (workSamples, _)) :: tail =>
+      val (dayTime, newWasAtWork) = collectWorkTimeForWorkSamples(workSamples, wasAtWork, date)
+      collectGroupedWorkTime(tail, user, newWasAtWork, result + (date -> dayTime))
+  }
   @tailrec
   private def countTime(
     list: List[(LocalDate, (List[WorkSample], Option[Holiday]))],
@@ -229,19 +293,25 @@ final class WorkService[F[_]: Sync](
       totalTime
     case (_, (_, Some(_))) :: tail =>
       countTime(tail, user, wasAtWork = false, totalTime |+| WorkTime.fromFiniteDuration((user.workingHours / 5).hour))
-    case (localDate, (workSamples, _)) :: tail =>
-      val (dayTime, newWasAtWork) =
-        if (workSamples.isEmpty && wasAtWork)
-          (
-            WorkTime.fromMillis(
-              getNextAtStartOfDayInstant(localDate).toEpochMilli - localDate.toInstant().toEpochMilli,
-            ),
-            wasAtWork,
-          )
-        else
-          countDayTime(workSamples, wasAtWork)
+    case (date, (workSamples, _)) :: tail =>
+      val (dayTime, newWasAtWork) = collectWorkTimeForWorkSamples(workSamples, wasAtWork, date)
       countTime(tail, user, newWasAtWork, totalTime |+| dayTime)
   }
+
+  private def collectWorkTimeForWorkSamples(
+    workSamples: List[WorkSample],
+    wasAtWork: Boolean,
+    date: LocalDate,
+  ): (WorkTime, Boolean) =
+    if (workSamples.isEmpty && wasAtWork)
+      (
+        WorkTime.fromMillis(
+          getNextAtStartOfDayInstant(date).toEpochMilli - date.toInstant().toEpochMilli,
+        ),
+        wasAtWork,
+      )
+    else
+      countDayTime(workSamples, wasAtWork)
 
   @tailrec
   private def countDayTime(
@@ -277,9 +347,11 @@ final class WorkService[F[_]: Sync](
       result
     case (date, (_, Some(_))) :: tail =>
       collectAllWorkIntervals(tail, wasAtWork = false, result :+ WorkInterval.Holiday(date))
-    case (localDate, (workSamples, _)) :: tail =>
+    case (date, _) :: tail if date > LocalDate.now() =>
+      collectAllWorkIntervals(tail, wasAtWork = false, result)
+    case (date, (workSamples, _)) :: tail =>
       val (workIntervals, newWasAtWork): (List[WorkInterval], Boolean) =
-        collectDayWorkIntervals(workSamples, wasAtWork, localDate.plusDays(1L).atStartOfDay())
+        collectDayWorkIntervals(workSamples, wasAtWork, date.plusDays(1L).atStartOfDay())
       collectAllWorkIntervals(tail, newWasAtWork, result ++ workIntervals)
   }
 
