@@ -155,6 +155,33 @@ final class WorkEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
         withOtherUser(username) { user =>
           extractWorkIntervals(workService)(user, fromDate, toDate)
         }
+
+      case GET -> Root / "other" / username / "getGroupedWorkTime" :? FromLocalDateMatcher(fromDate) +& ToLocalDateMatcher(
+            toDate,
+          ) asAuthed _ =>
+        withOtherUser(username) { user =>
+          workService
+            .getWorkTimeForUserGroupedByDate(user, fromDate, toDate)
+            .value >>= {
+            case Right(workMap) =>
+              for {
+                groupedWorkTimes <- Stream(workMap.toList: _*)
+                  .covary[F]
+                  .map {
+                    case (date, workTime) => GroupedWorkTimeDTO(date, workTime.toSeconds)
+                  }
+                  .compile
+                  .toList
+
+                result <- Ok {
+                  GetGroupedWorkTimeDTO(user.username, groupedWorkTimes.sortBy(_.date)).asJson
+                }
+              } yield result
+
+            case Left(ex) =>
+              BadRequest(ex.asJson)
+          }
+        }
     }
   }
 
