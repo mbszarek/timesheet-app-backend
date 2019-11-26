@@ -84,6 +84,7 @@ final class Server[F[_]: ConcurrentEffect] {
         ),
         "/workReports" -> WorkReportEndpoint.endpoint[F, HMACSHA256](
           routeAuth,
+          userService,
           workReportService,
         ),
       ).orNotFound
