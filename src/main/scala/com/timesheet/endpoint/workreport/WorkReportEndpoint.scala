@@ -33,7 +33,16 @@ final class WorkReportEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F
         case Left(ex) => BadRequest(ex.asJson)
         case Right(file) =>
           StaticFile
-            .fromFile(file, blocker, Some(request.request))
+            .fromFile(
+              file,
+              blocker,
+              Some(request.request),
+            )
+            .map { response =>
+              response.withHeaders(
+                response.headers ++ Headers.of(Header("Content-Disposition", """attachment; filename="report.txt"""")),
+              )
+            }
             .getOrElseF(NotFound())
       }
   }
