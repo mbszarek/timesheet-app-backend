@@ -15,6 +15,11 @@ final case class WorkTime(
   }
 
   def toSeconds: Long = ((days * 24 + hours) * 60 + minutes) * 60 + seconds
+
+  def workTimeDifference(workTime: WorkTime): WorkTime = {
+    WorkTime.fromMillis(Math.abs(toSeconds - workTime.toSeconds) * 1000)
+  }
+
 }
 
 object WorkTime {

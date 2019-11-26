@@ -16,12 +16,14 @@ import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.endpoint.worksample.WorkEndpoint
 import com.timesheet.core.service.init.InitService
+import com.timesheet.core.service.workReport.impl.WorkReportService
 import com.timesheet.core.store.holiday.impl.HolidayStoreMongo
 import com.timesheet.core.store.holidayrequest.impl.HolidayRequestStoreMongo
 import com.timesheet.core.validation.date.impl.DateValidator
 import com.timesheet.core.validation.holiday.impl.HolidayValidator
 import com.timesheet.endpoint.holiday.HolidayEndpoint
 import com.timesheet.endpoint.holidayrequest.{HolidayRequestApprovalEndpoint, HolidayRequestEndpoint}
+import com.timesheet.endpoint.workreport.WorkReportEndpoint
 import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -58,6 +60,7 @@ final class Server[F[_]: ConcurrentEffect] {
         holidayRequestStore,
       )
       holidayApprovalService = HolidayApprovalService[F](holidayStore, holidayRequestStore)
+      workReportService      = WorkReportService[F](workService, holidayService)
       authenticator          = Auth.jwtAuthenticator[F, HMACSHA256](key, authStore, userStore)
       routeAuth              = SecuredRequestHandler(authenticator)
       passwordHasher         = BCrypt.syncPasswordHasher[F]
@@ -78,6 +81,10 @@ final class Server[F[_]: ConcurrentEffect] {
           holidayApprovalService,
           userValidator,
           dateValidator,
+        ),
+        "/workReports" -> WorkReportEndpoint.endpoint[F, HMACSHA256](
+          routeAuth,
+          workReportService,
         ),
       ).orNotFound
 
