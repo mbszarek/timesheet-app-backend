@@ -25,7 +25,9 @@ final class WorkReportService[F[_]: Sync](
     user: User,
     from: LocalDate,
     to: LocalDate,
-  )(action: Either[DateValidationError, File] => F[T]): F[T] =
+  )(
+    action: Either[DateValidationError, File] => F[T],
+  ): F[T] =
     getFile(user).use { file =>
       Nested {
         {
@@ -55,7 +57,7 @@ final class WorkReportService[F[_]: Sync](
                )}""")}
              |------------
              |
-             |${withIndentation(0)(s"""Holidays taken (days): ${withIndentation(1)(s"${holidays.size}")}""")}
+             |${withIndentation(0)(s"""Holidays taken (days): ${withIndentation(1)(s"${printableHolidays.size}")}""")}
              |${printableHolidays.map(withIndentation(2)).mkString("\n")}
              |------------
              |
