@@ -2,9 +2,7 @@ package com.timesheet.util
 
 import java.time.LocalDate
 
-import cats._
 import cats.implicits._
-import cats.effect._
 import monix.eval.Task
 import org.scalatest.flatspec.AnyFlatSpec
 import monix.execution.Scheduler.Implicits.global
@@ -35,5 +33,4 @@ class DateRangeGeneratorTest extends AnyFlatSpec {
     }
     assert(isOrdered)
   }
-
 }

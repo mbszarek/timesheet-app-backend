@@ -11,5 +11,5 @@ object InstantTypeClassInstances {
     (output, value) => output.writeTimestamp(value.toEpochMilli),
   )
 
-  implicit val instantOrderInstance: Order[Instant] = Order.from[Instant](_ compareTo _)
+  implicit val instantOrderInstance: Order[Instant] = Order.fromComparable[Instant]
 }
