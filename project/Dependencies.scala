@@ -3,6 +3,7 @@ object Dependencies {
   val Http4sVersion           = "0.21.0-M5"
   val CirceVersion            = "0.12.3"
   val Specs2Version           = "4.8.0"
+  val ScalaTestVersion        = "3.1.0"
   val LogbackVersion          = "1.2.3"
   val MonixVersion            = "3.0.0"
   val tsecV                   = "0.2.0-M1"

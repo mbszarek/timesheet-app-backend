@@ -7,7 +7,7 @@ enablePlugins(
 )
 
 lazy val dockerSettings: Seq[SettingsDefinition] = Seq(
-  maintainer in Docker := "Mateusz Szarek <mateusz.szarek10@gmail.com>",
+  maintainer in Docker := "Mateusz Szarek <mszarek@student.agh.edu.pl>",
   packageSummary in Docker := "Containerized Timesheet App",
   packageDescription := "Timesheet App Service",
   mappings in Universal ++= {
@@ -29,6 +29,7 @@ lazy val root = (project in file("."))
     version := "1.0.0",
     scalaVersion := ProjectScalaVersion,
     scalafmtOnCompile := true,
+    mainClass in Compile := Some("com.timesheet.Main"),
     unmanagedClasspath in Runtime += baseDirectory.value / "config",
     libraryDependencies ++= Seq(
         "org.typelevel"         %% "cats-core"              % CatsVersion,
@@ -39,6 +40,7 @@ lazy val root = (project in file("."))
         "org.http4s"            %% "http4s-dsl"             % Http4sVersion,
         "io.circe"              %% "circe-generic"          % CirceVersion,
         "org.specs2"            %% "specs2-core"            % Specs2Version % "test",
+        "org.scalatest"         %% "scalatest"              % ScalaTestVersion % "test",
         "ch.qos.logback"        % "logback-classic"         % LogbackVersion,
         "io.monix"              %% "monix"                  % MonixVersion,
         "io.github.jmcardon"    %% "tsec-common"            % tsecV,
