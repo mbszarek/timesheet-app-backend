@@ -2,7 +2,7 @@ package com.timesheet.core.validation.worksample.impl
 
 import cats._
 import cats.data._
-import com.timesheet.core.validation.ValidationUtils.{WorkSampleValidationError, WrongUserState}
+import com.timesheet.core.error.ValidationErrors.{WorkSampleValidationError, WrongUserState}
 import com.timesheet.core.validation.worksample.WorkSampleValidatorAlgebra
 import com.timesheet.model.user.User
 import com.timesheet.model.work._

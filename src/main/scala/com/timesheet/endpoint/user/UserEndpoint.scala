@@ -5,8 +5,8 @@ import cats.effect._
 import cats.implicits._
 import com.timesheet.core.auth.Auth
 import com.timesheet.core.error.AuthenticationError
-import com.timesheet.core.service.user.UserServiceAlgebra
-import com.timesheet.core.validation.ValidationUtils._
+import com.timesheet.service.user.UserServiceAlgebra
+import com.timesheet.core.error.ValidationErrors._
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.rest.users.{LoginDTO, SignupDTO, UpdateUserDTO, UserDTO}
 import com.timesheet.model.user.{User, UserId}

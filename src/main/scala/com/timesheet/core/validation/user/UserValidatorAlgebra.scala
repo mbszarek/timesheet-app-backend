@@ -5,7 +5,7 @@ import com.timesheet.model.db.DBEntityWithUserId
 import com.timesheet.model.user.User
 
 trait UserValidatorAlgebra[F[_]] {
-  import com.timesheet.core.validation.ValidationUtils._
+  import com.timesheet.core.error.ValidationErrors._
 
   def doesExist(user: User): EitherT[F, UserValidationError, Unit]
 

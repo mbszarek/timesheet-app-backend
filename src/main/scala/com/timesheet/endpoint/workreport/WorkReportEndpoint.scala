@@ -5,10 +5,10 @@ import java.util.concurrent.Executors
 
 import cats.implicits._
 import cats.effect.{Blocker, ContextShift, Sync}
-import com.timesheet.core.service.workReport.WorkReportServiceAlgebra
+import com.timesheet.service.workReport.WorkReportServiceAlgebra
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.service.user.UserServiceAlgebra
+import com.timesheet.service.user.UserServiceAlgebra
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.user.{User, UserId}
 import org.http4s.HttpRoutes

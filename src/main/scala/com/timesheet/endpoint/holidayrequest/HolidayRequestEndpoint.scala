@@ -5,8 +5,8 @@ import cats.effect._
 import cats.implicits._
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
-import com.timesheet.core.validation.ValidationUtils.{BasicError, DateValidationError}
+import com.timesheet.service.holidayrequest.HolidayRequestServiceAlgebra
+import com.timesheet.core.error.ValidationErrors.{BasicError, DateValidationError}
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.db.ID
 import com.timesheet.model.rest.holidayrequest.CreateHolidayRequestDTO

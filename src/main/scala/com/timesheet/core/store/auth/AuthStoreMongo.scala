@@ -5,6 +5,7 @@ import cats.effect._
 import cats.implicits._
 import cats.data._
 import com.timesheet.core.db.MongoDriverMixin
+import com.timesheet.service.init.config.entities.MongoConfig
 import com.timesheet.model.user.UserId
 import org.mongodb.scala.MongoCollection
 import tsec.authentication.{AugmentedJWT, BackingStore}
@@ -19,6 +20,7 @@ final class AuthStoreMongo[F[_]: ConcurrentEffect, A](
 )(implicit
   hs: JWSSerializer[JWSMacHeader[A]],
   s: JWSMacCV[MacErrorM, A],
+  protected val mongoConfig: MongoConfig,
 ) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, UserId]]
     with MongoDriverMixin[F] {
   override type T = GenCodecJWT
@@ -60,6 +62,7 @@ object AuthStoreMongo {
   )(implicit
     hs: JWSSerializer[JWSMacHeader[A]],
     s: JWSMacCV[MacErrorM, A],
+    mongoConfig: MongoConfig,
   ): AuthStoreMongo[F, A] =
     new AuthStoreMongo(key)
 }

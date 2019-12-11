@@ -5,7 +5,7 @@ import cats._
 import cats.data._
 import cats.implicits._
 import com.timesheet.core.store.user.UserStoreAlgebra
-import com.timesheet.core.validation.ValidationUtils.{UserAlreadyExists, UserDoesNotExists, UserValidationError, RestrictedAccess}
+import com.timesheet.core.error.ValidationErrors.{UserAlreadyExists, UserDoesNotExists, UserValidationError, RestrictedAccess}
 import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.model.db.DBEntityWithUserId
 import com.timesheet.model.user.User

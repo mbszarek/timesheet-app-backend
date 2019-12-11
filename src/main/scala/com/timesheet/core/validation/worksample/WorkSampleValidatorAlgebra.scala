@@ -5,7 +5,7 @@ import com.timesheet.model.user.User
 import com.timesheet.model.work.ActivityType
 
 trait WorkSampleValidatorAlgebra[F[_]] {
-  import com.timesheet.core.validation.ValidationUtils._
+  import com.timesheet.core.error.ValidationErrors.WorkSampleValidationError
 
   def hasUserCorrectState(
     user: User,

@@ -3,19 +3,19 @@ package com.timesheet.core.db
 import cats.implicits._
 import cats.effect._
 import com.avsystem.commons.mongo.core.GenCodecRegistry
-import com.avsystem.commons.mongo.reactive.GenCodecCollection
 import com.avsystem.commons.serialization.GenCodec
+import com.timesheet.service.init.config.entities.MongoConfig
 import org.mongodb.scala.{MongoClient, MongoCollection, MongoDatabase}
 
 import scala.reflect.ClassTag
 
 trait MongoDriverMixin[F[_]] {
-  import MongoDriverMixin._
+  protected val mongoConfig: MongoConfig
 
   type T
 
   protected def connection(implicit F: Sync[F]): F[MongoClient] =
-    F.delay(Client)
+    F.delay(mongoConfig.client)
 
   protected def getDatabase(dbName: String)(implicit F: Sync[F]): F[MongoDatabase] =
     for {
@@ -42,9 +42,4 @@ trait MongoDriverMixin[F[_]] {
     val newRegistry = GenCodecRegistry.create[T](db.codecRegistry, GenCodecRegistry.LegacyOptionEncoding)
     db.withCodecRegistry(newRegistry).getCollection(name)
   }
-}
-
-private object MongoDriverMixin {
-  private[this] val MongoUri: String = "mongodb://localhost:27017"
-  private val Client: MongoClient    = MongoClient(MongoUri)
 }

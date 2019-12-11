@@ -6,6 +6,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import cats.effect._
 import cats.implicits._
 import com.avsystem.commons.serialization.GenCodec
+import com.timesheet.service.init.config.entities.MongoConfig
 import com.timesheet.core.store.base.StoreAlgebraImpl
 import com.timesheet.core.store.worksample.WorkSampleStoreAlgebra
 import com.timesheet.model.user.{User, UserId}
@@ -14,7 +15,9 @@ import fs2.interop.reactivestreams._
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 
-final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F] with WorkSampleStoreAlgebra[F] {
+final class WorkSampleStoreMongo[F[_]: ConcurrentEffect](implicit protected val mongoConfig: MongoConfig)
+    extends StoreAlgebraImpl[F]
+    with WorkSampleStoreAlgebra[F] {
   import WorkSample._
 
   protected val collection: F[MongoCollection[WorkSample]] = getCollection("workSamples")
@@ -105,5 +108,6 @@ final class WorkSampleStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImp
 }
 
 object WorkSampleStoreMongo {
-  def apply[F[_]: ConcurrentEffect]: WorkSampleStoreMongo[F] = new WorkSampleStoreMongo[F]()
+  def apply[F[_]: ConcurrentEffect](implicit mongoConfig: MongoConfig): WorkSampleStoreMongo[F] =
+    new WorkSampleStoreMongo[F]()
 }

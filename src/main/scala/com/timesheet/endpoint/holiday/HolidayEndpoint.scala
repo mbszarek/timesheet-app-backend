@@ -2,7 +2,7 @@ package com.timesheet.endpoint.holiday
 
 import cats.implicits._
 import cats.effect._
-import com.timesheet.core.service.holiday.HolidayServiceAlgebra
+import com.timesheet.service.holiday.HolidayServiceAlgebra
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
 import com.timesheet.endpoint.AuthEndpoint

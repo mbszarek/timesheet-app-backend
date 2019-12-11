@@ -8,7 +8,7 @@ import cats.data._
 import cats.implicits._
 import com.timesheet.core.store.holiday.HolidayStoreAlgebra
 import com.timesheet.core.store.holidayrequest.HolidayRequestStoreAlgebra
-import com.timesheet.core.validation.ValidationUtils._
+import com.timesheet.core.error.ValidationErrors._
 import com.timesheet.core.validation.holiday.HolidayValidatorAlgebra
 import com.timesheet.model.holiday.{Holiday, HolidayType}
 import com.timesheet.model.holidayrequest.HolidayRequest

@@ -6,12 +6,12 @@ import java.time.LocalDateTime
 import cats._
 import cats.data._
 import cats.implicits._
-import com.timesheet.core.validation.ValidationUtils.{DateInTheFuture, DateInThePast, DateValidationError, WrongDateOrder}
+import com.timesheet.core.error.ValidationErrors.{DateInTheFuture, DateInThePast, DateValidationError, WrongDateOrder}
 import com.timesheet.core.validation.date.DateValidatorAlgebra
 import com.timesheet.util.LocalDateTimeTypeClassInstances.localDateTimeOrderInstance
 
 final class DateValidator[F[_]: Applicative] extends DateValidatorAlgebra[F] {
-  def isDateInTheFuture(date: LocalDateTime): EitherT[F, ValidationUtils.DateValidationError, Unit] =
+  def isDateInTheFuture(date: LocalDateTime): EitherT[F, DateValidationError, Unit] =
     EitherT.condUnit[F, DateValidationError](
       date >= LocalDateTime.now(),
       DateInThePast,

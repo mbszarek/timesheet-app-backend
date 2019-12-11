@@ -4,10 +4,10 @@ import cats.data._
 import cats.effect._
 import cats.implicits._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.service.holidayapproval.HolidayApprovalServiceAlgebra
-import com.timesheet.core.service.holidayrequest.HolidayRequestServiceAlgebra
-import com.timesheet.core.service.user.UserServiceAlgebra
-import com.timesheet.core.validation.ValidationUtils.{BasicError, EntityNotFound}
+import com.timesheet.service.holidayapproval.HolidayApprovalServiceAlgebra
+import com.timesheet.service.holidayrequest.HolidayRequestServiceAlgebra
+import com.timesheet.service.user.UserServiceAlgebra
+import com.timesheet.core.error.ValidationErrors.{BasicError, EntityNotFound}
 import com.timesheet.core.validation.date.DateValidatorAlgebra
 import com.timesheet.core.validation.user.UserValidatorAlgebra
 import com.timesheet.endpoint.AuthEndpoint

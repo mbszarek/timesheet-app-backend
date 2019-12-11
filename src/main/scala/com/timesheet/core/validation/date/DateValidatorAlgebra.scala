@@ -3,7 +3,7 @@ package com.timesheet.core.validation.date
 import java.time.LocalDateTime
 
 import cats.data._
-import com.timesheet.core.validation.ValidationUtils.DateValidationError
+import com.timesheet.core.error.ValidationErrors.DateValidationError
 
 trait DateValidatorAlgebra[F[_]] {
   def isDateInTheFuture(date: LocalDateTime): EitherT[F, DateValidationError, Unit]

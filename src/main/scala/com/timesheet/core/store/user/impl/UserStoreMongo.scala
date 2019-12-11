@@ -5,13 +5,14 @@ import cats.effect._
 import cats.data._
 import cats.implicits._
 import com.timesheet.core.db.MongoDriverMixin
+import com.timesheet.service.init.config.entities.MongoConfig
 import com.timesheet.core.store.user.UserStoreAlgebra
 import com.timesheet.model.user.{User, UserId}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters._
 import tsec.authentication.IdentityStore
 
-final class UserStoreMongo[F[_]: ConcurrentEffect]
+final class UserStoreMongo[F[_]: ConcurrentEffect](implicit protected val mongoConfig: MongoConfig)
     extends UserStoreAlgebra[F]
     with IdentityStore[F, UserId, User]
     with MongoDriverMixin[F] {
@@ -73,5 +74,5 @@ final class UserStoreMongo[F[_]: ConcurrentEffect]
 }
 
 object UserStoreMongo {
-  def apply[F[_]: ConcurrentEffect]: UserStoreMongo[F] = new UserStoreMongo[F]()
+  def apply[F[_]: ConcurrentEffect](implicit mongoConfig: MongoConfig): UserStoreMongo[F] = new UserStoreMongo[F]()
 }

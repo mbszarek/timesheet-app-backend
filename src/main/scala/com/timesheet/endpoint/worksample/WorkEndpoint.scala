@@ -6,9 +6,9 @@ import cats.effect._
 import cats.implicits._
 import com.timesheet.EndpointUtils._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.service.user.UserServiceAlgebra
-import com.timesheet.core.service.work.WorkServiceAlgebra
-import com.timesheet.core.validation.ValidationUtils.WorkSampleValidationError
+import com.timesheet.service.user.UserServiceAlgebra
+import com.timesheet.service.work.WorkServiceAlgebra
+import com.timesheet.core.error.ValidationErrors.WorkSampleValidationError
 import com.timesheet.endpoint.AuthEndpoint
 import com.timesheet.model.rest.work.{GetGroupedWorkTimeDTO, GetWorkingTimeResultDTO, GroupedWorkTimeDTO, WorkSampleDTO}
 import com.timesheet.model.user.{User, UserId}

@@ -5,6 +5,7 @@ import java.time.LocalDate
 
 import cats.implicits._
 import cats.effect._
+import com.timesheet.service.init.config.entities.MongoConfig
 import com.timesheet.core.store.base.StoreAlgebraImpl
 import com.timesheet.core.store.holiday.HolidayStoreAlgebra
 import com.timesheet.model.holiday.Holiday
@@ -13,7 +14,9 @@ import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 
-final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F] with HolidayStoreAlgebra[F] {
+final class HolidayStoreMongo[F[_]: ConcurrentEffect](implicit protected val mongoConfig: MongoConfig)
+    extends StoreAlgebraImpl[F]
+    with HolidayStoreAlgebra[F] {
   import Holiday._
 
   protected val collection: F[MongoCollection[Holiday]] = getCollection("holidays")
@@ -66,5 +69,5 @@ final class HolidayStoreMongo[F[_]: ConcurrentEffect] extends StoreAlgebraImpl[F
 }
 
 object HolidayStoreMongo {
-  def apply[F[_]: ConcurrentEffect]: HolidayStoreMongo[F] = new HolidayStoreMongo[F]
+  def apply[F[_]: ConcurrentEffect](implicit mongoConfig: MongoConfig): HolidayStoreMongo[F] = new HolidayStoreMongo[F]
 }

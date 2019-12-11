@@ -3,7 +3,7 @@ package com.timesheet.core.validation.holiday
 import java.time.LocalDate
 
 import cats.data._
-import com.timesheet.core.validation.ValidationUtils.{HolidayRequestValidationError, HolidayValidationError}
+import com.timesheet.core.error.ValidationErrors.{HolidayRequestValidationError, HolidayValidationError}
 import com.timesheet.model.holiday.HolidayType
 import com.timesheet.model.user.User
 

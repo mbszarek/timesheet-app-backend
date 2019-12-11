@@ -2,12 +2,12 @@ package com.timesheet
 
 import cats.effect._
 import com.timesheet.core.auth.Auth
-import com.timesheet.core.service.holiday.impl.HolidayService
-import com.timesheet.core.service.holidayapproval.impl.HolidayApprovalService
-import com.timesheet.core.service.holidayrequest.impl.HolidayRequestService
-import com.timesheet.core.service.init.config.ConfigLoaderImpl
-import com.timesheet.core.service.user.impl.UserService
-import com.timesheet.core.service.work.impl.WorkService
+import com.timesheet.service.holiday.impl.HolidayService
+import com.timesheet.service.holidayapproval.impl.HolidayApprovalService
+import com.timesheet.service.holidayrequest.impl.HolidayRequestService
+import com.timesheet.service.init.config.ConfigLoaderImpl
+import com.timesheet.service.user.impl.UserService
+import com.timesheet.service.work.impl.WorkService
 import com.timesheet.core.store.auth.AuthStoreMongo
 import com.timesheet.core.store.user.impl.UserStoreMongo
 import com.timesheet.core.store.worksample.impl.WorkSampleStoreMongo
@@ -15,8 +15,8 @@ import com.timesheet.core.validation.user.impl.UserValidator
 import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
 import com.timesheet.endpoint.worksample.WorkEndpoint
-import com.timesheet.core.service.init.InitService
-import com.timesheet.core.service.workReport.impl.WorkReportService
+import com.timesheet.service.init.InitService
+import com.timesheet.service.workReport.impl.WorkReportService
 import com.timesheet.core.store.holiday.impl.HolidayStoreMongo
 import com.timesheet.core.store.holidayrequest.impl.HolidayRequestStoreMongo
 import com.timesheet.core.validation.date.impl.DateValidator
@@ -24,6 +24,7 @@ import com.timesheet.core.validation.holiday.impl.HolidayValidator
 import com.timesheet.endpoint.holiday.HolidayEndpoint
 import com.timesheet.endpoint.holidayrequest.{HolidayRequestApprovalEndpoint, HolidayRequestEndpoint}
 import com.timesheet.endpoint.workreport.WorkReportEndpoint
+import com.timesheet.service.init.config.entities.MongoConfig
 import fs2.Stream
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -40,7 +41,9 @@ final class Server[F[_]: ConcurrentEffect] {
     C: ContextShift[F],
   ): Stream[F, Nothing] = {
     for {
-      key <- Stream.eval(HMACSHA256.generateKey[F])
+      configLoader                        <- Stream(ConfigLoaderImpl[F]).covary[F]
+      implicit0(mongoConfig: MongoConfig) <- Stream.eval(configLoader.loadMongoConfig())
+      key                                 <- Stream.eval(HMACSHA256.generateKey[F])
       authStore           = AuthStoreMongo[F, HMACSHA256](key)
       userStore           = UserStoreMongo[F]
       workSampleStore     = WorkSampleStoreMongo[F]
@@ -89,7 +92,7 @@ final class Server[F[_]: ConcurrentEffect] {
         ),
       ).orNotFound
 
-      finalHttpApp = Logger.httpApp(logHeaders = true, logBody = true)(httpApp)
+      finalHttpApp = Logger.httpApp(logHeaders = hostConfig.logHeaders, logBody = hostConfig.logBody)(httpApp)
 
       exitCode <- BlazeServerBuilder[F]
         .bindHttp(hostConfig.port, hostConfig.hostName)
