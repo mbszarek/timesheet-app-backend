@@ -51,8 +51,18 @@ object Auth {
   ): TSecAuthService[User, AugmentedJWT[Auth, UserId], F] =
     TSecAuthService.withAuthorizationHandler(allRolesHelper[F, AugmentedJWT[Auth, UserId]])(pf, onNotAuthorized.run)
 
-  private def adminOnlyHelper[F[_], Auth](implicit F: MonadError[F, Throwable]): BasicRBAC[F, Role, User, Auth] =
+  private def employerAdminHelper[F[_], Auth](implicit F: MonadError[F, Throwable]): BasicRBAC[F, Role, User, Auth] =
     BasicRBAC[F, Role, User, Auth](Role.Admin, Role.Employer)
+
+  def employerAdminOnly[F[_], Auth](
+    pf: PartialFunction[SecuredRequest[F, User, AugmentedJWT[Auth, UserId]], F[Response[F]]],
+  )(implicit
+    F: MonadError[F, Throwable],
+  ): TSecAuthService[User, AugmentedJWT[Auth, UserId], F] =
+    TSecAuthService.withAuthorization(employerAdminHelper[F, AugmentedJWT[Auth, UserId]])(pf)
+
+  private def adminOnlyHelper[F[_], Auth](implicit F: MonadError[F, Throwable]): BasicRBAC[F, Role, User, Auth] =
+    BasicRBAC[F, Role, User, Auth](Role.Admin)
 
   def adminOnly[F[_], Auth](
     pf: PartialFunction[SecuredRequest[F, User, AugmentedJWT[Auth, UserId]], F[Response[F]]],

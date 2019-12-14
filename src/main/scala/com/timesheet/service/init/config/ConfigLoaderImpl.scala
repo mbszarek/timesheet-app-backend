@@ -10,6 +10,9 @@ final class ConfigLoaderImpl[F[_]: Sync] extends ConfigLoader[F] {
   def loadHostConfig(): F[HostConfig] =
     ConfigSource.default.at("hostConfig").loadF[F, HostConfig]
 
+  def loadAdminHostConfig(): F[HostConfig] =
+    ConfigSource.default.at("adminHostConfig").loadF[F, HostConfig]
+
   def loadInitConfig(): F[entities.InitConfig] =
     ConfigSource.default.at("init").loadF[F, InitConfig]
 

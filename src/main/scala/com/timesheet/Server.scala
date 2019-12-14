@@ -14,7 +14,7 @@ import com.timesheet.core.store.worksample.impl.WorkSampleStoreMongo
 import com.timesheet.core.validation.user.impl.UserValidator
 import com.timesheet.core.validation.worksample.impl.WorkSampleValidator
 import com.timesheet.endpoint.user.UserEndpoint
-import com.timesheet.endpoint.worksample.WorkEndpoint
+import com.timesheet.endpoint.worksample.{AdminWorkEndpoint, WorkEndpoint}
 import com.timesheet.service.init.InitService
 import com.timesheet.service.workReport.impl.WorkReportService
 import com.timesheet.core.store.holiday.impl.HolidayStoreMongo
@@ -69,8 +69,9 @@ final class Server[F[_]: ConcurrentEffect] {
       passwordHasher         = BCrypt.syncPasswordHasher[F]
       configLoader           = ConfigLoaderImpl[F]
 
-      _          <- InitService[F, BCrypt](passwordHasher, userService, configLoader).init
-      hostConfig <- Stream.eval(configLoader.loadHostConfig())
+      _               <- InitService[F, BCrypt](passwordHasher, userService, configLoader).init
+      hostConfig      <- Stream.eval(configLoader.loadHostConfig())
+      adminHostConfig <- Stream.eval(configLoader.loadAdminHostConfig())
 
       httpApp = Router(
         "/users"          -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
@@ -92,7 +93,20 @@ final class Server[F[_]: ConcurrentEffect] {
         ),
       ).orNotFound
 
+      adminApp = Router(
+        "/users" -> UserEndpoint.endpoint[F, BCrypt, HMACSHA256](userService, passwordHasher, routeAuth),
+        "/work"  -> AdminWorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService),
+      ).orNotFound
+
+      finalAdminHttpApp = Logger.httpApp(logHeaders = adminHostConfig.logHeaders, logBody = adminHostConfig.logBody)(adminApp)
+
       finalHttpApp = Logger.httpApp(logHeaders = hostConfig.logHeaders, logBody = hostConfig.logBody)(httpApp)
+
+      _ <- BlazeServerBuilder[F]
+        .bindHttp(adminHostConfig.port, adminHostConfig.hostName)
+        .withHttpApp(CORS(finalAdminHttpApp))
+        .serve
+        .spawn
 
       exitCode <- BlazeServerBuilder[F]
         .bindHttp(hostConfig.port, hostConfig.hostName)

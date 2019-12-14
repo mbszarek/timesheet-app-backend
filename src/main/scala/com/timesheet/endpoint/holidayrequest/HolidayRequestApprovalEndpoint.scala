@@ -75,7 +75,7 @@ final class HolidayRequestApprovalEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends
     dateValidator: DateValidatorAlgebra[F],
   ): HttpRoutes[F] =
     auth.liftService {
-      Auth.adminOnly {
+      Auth.employerAdminOnly {
         approveHolidayRequestEndpoint(
           userService,
           holidayRequestService,

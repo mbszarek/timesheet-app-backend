@@ -105,7 +105,7 @@ final class WorkReportEndpoint[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F
     val allRolesRoutes = Auth.allRolesHandler {
       userWorkReportEndpoint(workReportService)
     }(TSecAuthService.empty)
-    val adminRoutes = Auth.adminOnly {
+    val adminRoutes = Auth.employerAdminOnly {
       adminWorkReportEndpoint(userService, workReportService)
     }
     auth.liftService(allRolesRoutes <+> adminRoutes)
