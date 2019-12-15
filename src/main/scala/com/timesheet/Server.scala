@@ -98,7 +98,9 @@ final class Server[F[_]: ConcurrentEffect] {
         "/work"  -> AdminWorkEndpoint.endpoint[F, HMACSHA256](routeAuth, userService, workService),
       ).orNotFound
 
-      finalAdminHttpApp = Logger.httpApp(logHeaders = adminHostConfig.logHeaders, logBody = adminHostConfig.logBody)(adminApp)
+      finalAdminHttpApp = Logger.httpApp(logHeaders = adminHostConfig.logHeaders, logBody = adminHostConfig.logBody)(
+        adminApp,
+      )
 
       finalHttpApp = Logger.httpApp(logHeaders = hostConfig.logHeaders, logBody = hostConfig.logBody)(httpApp)
 

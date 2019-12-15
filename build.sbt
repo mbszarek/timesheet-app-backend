@@ -18,6 +18,7 @@ lazy val dockerSettings: Seq[SettingsDefinition] = Seq(
   dockerExposedPorts in Docker := Seq(8080),
   daemonUser in Docker := "timesheet",
   scriptClasspath in bashScriptDefines ~= (cp => "../config" +: cp),
+  dockerAliases ++= Seq(dockerAlias.value.withTag(Option("latest")))
 )
 
 lazy val root = (project in file("."))
